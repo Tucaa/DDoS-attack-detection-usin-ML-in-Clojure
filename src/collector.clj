@@ -1,17 +1,21 @@
 (ns collector
-  ;(:gen-class)
-  (:import
-    (:import (org.pcap4j.core Pcaps))))
+  (:gen-class)
+  (:require [clojure.java.io :as io])
+  (:import [io.pkts Pcap]
+           [io.pkts.packet Packet]
+           [io.pkts.buffer Buffer]
+           [io.pkts.protocol Protocol]))
 
 
-;F-ja koja cita podatke iz pcap fajla (resiti import)
-(defn read_pcap [file]
-  (with-open [handle (org.pcap4j.core.Pcaps/openOffline file)]
-    (loop []
-      (let [packet (.getNextPacket handle)]
-        (when packet
-          (println "Packet length:" (.length packet))
-          (recur))))))
+;F-ja koja cita podatke iz pcap fajla (resiti import) za sada samo binarni format dok ne resis problem sa citanjem preko io.pkts
+(defn raw_file [file]
+  (with-open [in (io/input-stream file)]
+    (loop [buffer (byte-array 4096)]
+      (let [n (.read in buffer)]
+        (when (pos? n)
+          (println (String. buffer 0 n "ISO-8859-1"))
+          (recur buffer))))))
+
 
 ;Funkcija koja agregira tot_bytes i koja vraca counter i finalnu agregiranu vrednost
 (defn aggregate
@@ -56,9 +60,7 @@
   (println (str "Ulazni podaci: " test_data))
   (println (str "Rezultati: " results))
 
-  (def read (read_pcap "promenjena putanja fajla"))
-
-  (println (str "Citanje fajla: " read))
+  (def test_pcap (raw_file "D:/Milan/test.pcap"))
 
   ;(def converted-kb (convert (:total-bytes results) :KB))
 

@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Deps: io.pkts/pkts-sdp:3.0.18">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/io/pkts/pkts-sdp/3.0.18/pkts-sdp-3.0.18.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
