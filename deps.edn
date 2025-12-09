@@ -1,2 +1,5 @@
-{:paths ["src" "resources"]
- :deps {org.clojure/clojure {:mvn/version "1.11.1"}}}
+{:paths ["src"]
+ :deps
+ {org.clojure/clojure {:mvn/version "1.11.1"}
+  org.pcap4j/pcap4j-core {:mvn/version "1.8.2"}
+  org.pcap4j/pcap4j-packetfactory-static {:mvn/version "1.8.2"}}}

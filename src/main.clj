@@ -26,50 +26,80 @@
 
 (defn plusminus [s]
   ;
-  (let [sign-adjusted-s (if (.startsWith s "L")
+  (let [f_string (if (.startsWith s "L")
                           (str "-" (subs s 1))
                           ;Stavlja se empty stirng posto ne mora + posto je svakako pozitivan broj
                           (str "" (subs s 1)))]
 
-    (Integer/parseInt sign-adjusted-s)))
+    (Integer/parseInt f_string)))
+
+;Ova funkcija je dodata zato sto clojure -10/100 racuna kao nulu
+;Ova funkcija vraca -1
+;Long trimuje decimalni deo
+(defn floor_f [num1, num2]
+  (long (Math/floor (/ num1 num2)))
+  )
 
 (defn pwd_f [numbers]
   ;; Definiše se hash mapa sa početnom pozicijom i brojačem
   (let [initial {:start 50 :count 0 :count2 0}]
     (reduce (fn [acc num]
               ;; Stavlja se trenutna pozicija na akumulator
-              (let [cur-pos (:start acc)
+              (let [cur_pos (:start acc)
                     ;Racunanje nove pozicije
-                    new-pos (mod (+ cur-pos num) 100)
+                    ;Ukupno sabiranje sabira se ukupan broj
+                    total (+ cur_pos num)
+                    new_pos (mod (+ cur_pos num) 100)
                     ;Ako je nova pozicija 0 dodaje se u count
-                    new-count (if (zero? new-pos)
+                    new-count (if (= new_pos 0) ;(zero? new_pos) Moze i ovako
                                 (inc (:count acc))
                                 (:count acc))
+
+                    clicks (if (> num 0)
+                                  ;Ako je pozitivan borj ona se racuna razlika celobrojnog deljenja (50 i 1000) > 1050 / 100 == 10 - 50/100 == 0 ukupno 10
+                                  (- (quot total 100) (quot cur_pos 100))
+                                  ;U suprotnom se
+                                  (- (floor_f (dec cur_pos) 100) (floor_f (dec total) 100)))
+                    new-count2 (+ (:count2 acc) clicks)]
+                    ;Stari pristup nije davao dobar rezultat davao je 5805 umesto 5820 Nije uzimao u obir na primer kada se pocne na 99 pa doda 100 prodje se 0 2 puta
                     ;Drugi count kada predje preko nule racuna se ako je broj i trenutni veci od 100 ili je razlika brojeva manja od nule
-                    new-count2 (cond
-                                 ;Negativan broj proverava se da li je broj koji treba da se odume veci od broja od kojeg se oduzima
-                                 (< num 0)
-                                 (if (> (Math/abs num) cur-pos)
-                                   (inc (:count2 acc))
-                                   (:count2 acc))
+                    ;new-count2 (cond
+                                 ;
+                                 ;;Negativan broj proverava se da li je broj koji treba da se odume veci od broja od kojeg se oduzima
+                                 ;(< num 0)
+                                 ;(if (> (Math/abs num) 100)
+                                 ;  (inc (:count2 (update acc :count2 + (quot (Math/abs num) 100)))) ;Mora apsolutna zato sto je ovde negativan broj
+                                 ;  (if (> (Math/abs num) cur_pos)
+                                 ;    (inc (:count2 acc))
+                                 ;    (:count2 acc)))
+                                 ;
+                                 ;
+                                 ;;Pozitivan proverava se da li je zbir 2 broja veci od 100 (znaci presao je 1000)
+                                 ;(> num 0)
+                                 ;(if (> (Math/abs num) 100)
+                                 ;  (inc (:count2 (update acc :count2 + (quot num 100))))
+                                 ;  (if (> (+ cur_pos num) 100)
+                                 ;    (inc (:count2 acc))
+                                 ;    (:count2 acc)))
+                                 ;
+                                 ;; Prebaceno u uslove gore (uslov if (> (Math/abs num) 100))
+                                 ;;Kod ovog uslova treba da se uradi celobrojno sa 100 taj broj se dodaje u drugi brojac
+                                 ;; Treba mi ostatak
+                                 ;; Ostatak bi trebalo da se provuce kroz gornja 2 uslova
+                                 ;
+                                 ;:else
+                                 ;(:count2 acc))]
 
-                                 ;Pozitivan proverava se da li je zbir 2 broja veci od 100 (znaci presao je 1000)
-                                 (> num 0)
-                                 (if (> (+ cur-pos num) 100)
-                                   (inc (:count2 acc))
-                                   (:count2 acc))
+                (println "Trenutna:" cur_pos " num:" num " -> Sledeca:" new_pos "Acc:" acc)
 
-                                 :else
-                                 (:count2 acc))]
-
-                (println "Trenutna:" cur-pos " num:" num " -> Sledeca:" new-pos "Acc:" acc)
-
-                {:start new-pos :count new-count :count2 new-count2 }))
+                {:start new_pos :count new-count :count2 new-count2 }))
 
             ;Ovde je inicijalna vrednost brojaca
             initial
             ;Ovde je sequenca brojeva nad kojom se vrsi reduce
             numbers)))
+
+
 (defn -main
   [& args]
 

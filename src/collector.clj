@@ -1,22 +1,17 @@
 (ns collector
-  (:gen-class)
-  ;(:require [clojure.string :as str])
-  ;Ovo proveri kako se importuje nece da radi kako treba
-  ;(:import [clj_net_pcap Pcap])
-  )
+  ;(:gen-class)
+  (:import
+    (:import (org.pcap4j.core Pcaps))))
+
 
 ;F-ja koja cita podatke iz pcap fajla (resiti import)
-;(defn read-and-print-pcap-simple
-;  [pcap-file-path]
-;  (println (str "--- Fajl path " pcap-file-path " ---"))
-;
-;  (Pcap/read pcap-file-path
-;             (fn [packet]
-;               (let [header (.getPcapHeader packet)]
-;                 (println (str "Timestamp: " (.getTimestamp header)))
-;                 (println (str "Original Length: " (.getOrigLength header) " bytes"))
-;                 (println (str "Captured Length: " (.getCaptureLength header) " bytes"))))))
-
+(defn read_pcap [file]
+  (with-open [handle (org.pcap4j.core.Pcaps/openOffline file)]
+    (loop []
+      (let [packet (.getNextPacket handle)]
+        (when packet
+          (println "Packet length:" (.length packet))
+          (recur))))))
 
 ;Funkcija koja agregira tot_bytes i koja vraca counter i finalnu agregiranu vrednost
 (defn aggregate
@@ -32,6 +27,7 @@
 
 ;Funkcija za konvertovanje vrednosti na osnovu definisane jedinice ('KB, MB, GB ...)
 ;Kasnije modifikovati da dinamicki pronalazi da li su ('KB, MB ili GB)
+;Mapirati sa ovom f-jom
 (defn convert
   [unit]
   (let [base 1024]
@@ -60,8 +56,11 @@
   (println (str "Ulazni podaci: " test_data))
   (println (str "Rezultati: " results))
 
-  (def converted-kb
-    (convert (:total-bytes results) :KB))
+  (def read (read_pcap "promenjena putanja fajla"))
 
-  (println (str "Konvertovana vrednost (KB): " converted-kb)))
-  ;(read-and-print-pcap-simple "src/test.pcap"))
+  (println (str "Citanje fajla: " read))
+
+  ;(def converted-kb (convert (:total-bytes results) :KB))
+
+  ;(println (str "Konvertovana vrednost (KB): " converted-kb)))
+  )
