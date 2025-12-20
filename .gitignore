@@ -1,0 +1,10 @@
+src/main.clj
+
+target/
+.cpcache/
+.nrepl-port
+.calva/
+.lsp/
+
+.DS_Store
+Thumbs.db

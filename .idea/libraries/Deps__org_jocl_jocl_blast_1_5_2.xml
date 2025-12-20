@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Deps: org.jocl/jocl-blast:1.5.2">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/jocl/jocl-blast/1.5.2/jocl-blast-1.5.2.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

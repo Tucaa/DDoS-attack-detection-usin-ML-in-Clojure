@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Deps: org.bytedeco/javacpp$windows-x86_64:1.5.10">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/bytedeco/javacpp/1.5.10/javacpp-1.5.10-windows-x86_64.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
