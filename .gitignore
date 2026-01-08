@@ -1,10 +1,5 @@
-src/main.clj
-
-target/
-.cpcache/
-.nrepl-port
 .calva/
+.clj-kondo/
+.cpcache/
+.idea/
 .lsp/
-
-.DS_Store
-Thumbs.db

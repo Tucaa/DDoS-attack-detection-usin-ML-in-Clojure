@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="Deps: org.bytedeco/cuda$windows-x86_64:12.3-8.9-1.5.10">
-    <CLASSES>
-      <root url="jar://$MAVEN_REPOSITORY$/org/bytedeco/cuda/12.3-8.9-1.5.10/cuda-12.3-8.9-1.5.10-windows-x86_64.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>
