@@ -13,24 +13,27 @@
   (let [start-ts (System/currentTimeMillis)
         window-ms 5000
         samples
-        (concat
-         ;;  Attacck patterni
-         (w/generate-windows attacks/udp-large-packets 1000 start-ts window-ms)
-         ;;  (w/generate-windows attacks/udp-empty-packets 1000 start-ts window-ms)
-         ;;  (w/generate-windows attacks/tcp-ack-anomaly 1000 start-ts window-ms)
-         (w/generate-windows attacks/subnet-carpet-bombing 1000 start-ts window-ms)
-         (w/generate-windows attacks/syn-flood 1000 start-ts window-ms)
-         (w/generate-windows attacks/icmp-flood 1000 start-ts window-ms)
-         (w/generate-windows attacks/udp-flood-mixed 1000 start-ts window-ms)
-         (w/generate-windows attacks/ntp-amplification 1000 start-ts window-ms)
-         (w/generate-windows attacks/ack-flood 1000 start-ts window-ms)
-         (w/generate-windows attacks/dns-amplification 1000 start-ts window-ms)
-         ;; Normanal saobracaj
-         (w/generate-windows normal/normal-web-traffic 1000 start-ts window-ms)
-         (w/generate-windows normal/normal-enterprise-traffic 1000 start-ts window-ms)
-         (w/generate-windows normal/normal-streaming-traffic 1000 start-ts window-ms)
-         (w/generate-windows normal/normal-dns-traffic 1000 start-ts window-ms)
-         (w/generate-windows normal/normal-email-traffic 1000 start-ts window-ms)
-         (w/generate-windows normal/normal-email-traffic 1000 start-ts window-ms))]
+        (->> (concat
+              ;;  Attacck patterni
+              (w/generate-windows attacks/udp-large-packets 1000 start-ts window-ms)
+              ;;  (w/generate-windows attacks/udp-empty-packets 1000 start-ts window-ms)
+              ;;  (w/generate-windows attacks/tcp-ack-anomaly 1000 start-ts window-ms)
+              (w/generate-windows attacks/subnet-carpet-bombing 1000 start-ts window-ms)
+              (w/generate-windows attacks/syn-flood 1000 start-ts window-ms)
+              (w/generate-windows attacks/icmp-flood 1000 start-ts window-ms)
+              (w/generate-windows attacks/udp-flood-mixed 1000 start-ts window-ms)
+              (w/generate-windows attacks/ntp-amplification 1000 start-ts window-ms)
+              (w/generate-windows attacks/ack-flood 1000 start-ts window-ms)
+              (w/generate-windows attacks/dns-amplification 1000 start-ts window-ms)
+              ;; Normanal saobracaj
+              (w/generate-windows normal/normal-web-traffic 1000 start-ts window-ms)
+              (w/generate-windows normal/normal-enterprise-traffic 1000 start-ts window-ms)
+              (w/generate-windows normal/normal-streaming-traffic 1000 start-ts window-ms)
+              (w/generate-windows normal/normal-dns-traffic 1000 start-ts window-ms)
+              (w/generate-windows normal/normal-email-traffic 1000 start-ts window-ms)
+              (w/generate-windows normal/normal-email-traffic 1000 start-ts window-ms))
+             (map #(vector (rand) %))
+             (sort-by first)
+             (map second))]
     (export/write-csv samples "ddos_dataset.csv")
     (println "Dataset generated: ddos_dataset.csv")))
