@@ -7,7 +7,7 @@
   (let [packet-rate (r/rand-normal 80000 15000)
         byte-rate (* packet-rate (r/rand-normal 1300 100))
         unique-src (r/rand-uniform 500 3000)]
-    {:label :udp-flood-large
+    {:label "udp-flood-large"
 
      ;; Volumetrija
      :packet-rate (r/clamp packet-rate 40000 150000)
@@ -51,7 +51,7 @@
 (defn dns-amplification []
   (let [packet-rate (r/rand-normal 60000 12000)
         unique-src (r/rand-uniform 2000 10000)]
-    {:label :dns-amplification
+    {:label "dns-amplification"
 
      ;; Volumetrija (veliki paketi zbog DNS responsa)
      :packet-rate (r/clamp packet-rate 30000 120000)
@@ -96,7 +96,7 @@
 (defn subnet-carpet-bombing []
   (let [packet-rate (r/rand-normal 70000 18000)
         unique-dst (r/rand-uniform 5000 20000)]
-    {:label :subnet-carpet-bombing
+    {:label "subnet-carpet-bombing"
 
      ;; Volumetrija
      :packet-rate (r/clamp packet-rate 35000 140000)
@@ -140,7 +140,7 @@
 (defn syn-flood []
   (let [packet-rate (r/rand-normal 90000 20000)
         unique-src (r/rand-uniform 3000 15000)]
-    {:label :syn-flood
+    {:label "syn-flood"
 
      ;; Volumetrija (manji paketi - samo SYN)
      :packet-rate (r/clamp packet-rate 50000 180000)
@@ -184,7 +184,7 @@
 (defn icmp-flood []
   (let [packet-rate (r/rand-normal 100000 25000)
         unique-src (r/rand-uniform 2000 12000)]
-    {:label :icmp-flood
+    {:label "icmp-flood"
 
      ;; Volumetrija (mali paketi ICMP echo request)
      :packet-rate (r/clamp packet-rate 60000 200000)
@@ -228,7 +228,7 @@
 (defn udp-flood-mixed []
   (let [packet-rate (r/rand-normal 85000 18000)
         unique-src (r/rand-uniform 1500 8000)]
-    {:label :udp-flood-mixed
+    {:label "udp-flood-mixed"
 
      ;; Volumetrija (srednje veličine paketi)
      :packet-rate (r/clamp packet-rate 45000 160000)
@@ -272,7 +272,7 @@
 (defn ntp-amplification []
   (let [packet-rate (r/rand-normal 55000 12000)
         unique-src (r/rand-uniform 1500 7000)]
-    {:label :ntp-amplification
+    {:label "ntp-amplification"
 
      ;; Volumetrija (veliki response paketi)
      :packet-rate (r/clamp packet-rate 30000 110000)
@@ -312,11 +312,11 @@
      ;; Subnet spread
      :dst-subnet-spread (r/rand-uniform 0.08 0.35)}))
 
-;; 8. ACK Flood Attack
+;;  ACK Flood Attack
 (defn ack-flood []
   (let [packet-rate (r/rand-normal 95000 22000)
         unique-src (r/rand-uniform 4000 18000)]
-    {:label :ack-flood
+    {:label "ack-flood"
 
      ;; Volumetrija
      :packet-rate (r/clamp packet-rate 50000 190000)
@@ -358,17 +358,17 @@
 
 ;; F-ja za generisanje podataka 
 ;; Izmesaj i ovde podatke
-(def attack-generators
-  {:udp-large udp-large-packets
-   ;;  :udp-empty udp-empty-packets
-   ;;  :tcp-ack tcp-ack-anomaly
-   :dns-amplification dns-amplification
-   :subnet-carpet subnet-carpet-bombing
-   :syn-flood syn-flood
-   :icmp-flood icmp-flood
-   :udp-flood-mixed udp-flood-mixed
-   :ntp-amplification ntp-amplification
-   :ack-flood ack-flood})
+;; (def attack-generators
+;;   {:udp-large udp-large-packets
+;;    ;;  :udp-empty udp-empty-packets
+;;    ;;  :tcp-ack tcp-ack-anomaly
+;;    "dns-amplification" dns-amplification
+;;    :subnet-carpet subnet-carpet-bombing
+;;    :syn-flood syn-flood
+;;    "icmp-flood" icmp-flood
+;;    "udp-flood-mixed" udp-flood-mixed
+;;    "ntp-amplification" ntp-amplification
+;;    "ack-flood" ack-flood})
 
 
 ;; UDP paketi bez  payloada

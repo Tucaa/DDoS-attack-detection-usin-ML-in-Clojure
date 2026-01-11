@@ -3,7 +3,7 @@
 
 ;;  Normal Web Traffic (HTTP/HTTPS)
 (defn normal-web-traffic []
-  {:label :normal
+  {:label "normal"
    
    ;; Volumetrija (normalan rate)
    :packet-rate (r/rand-uniform 2000 12000)
@@ -45,7 +45,7 @@
 
 ;;  Normal Business/Enterprise Traffic
 (defn normal-enterprise-traffic []
-  {:label :normal
+  {:label "normal"
    
    ;; Volumetrija
    :packet-rate (r/rand-uniform 3000 15000)
@@ -87,7 +87,7 @@
 
 ;;  Normal Streaming/Media Traffic
 (defn normal-streaming-traffic []
-  {:label :normal
+  {:label "normal"
    
    ;; Volumetrija (viši throughput, stabilniji)
    :packet-rate (r/rand-uniform 5000 20000)
@@ -129,7 +129,7 @@
 
 ;; Normal DNS Traffic
 (defn normal-dns-traffic []
-  {:label :normal
+  {:label "normal"
    
    ;; Volumetrija (nizak rate, mali paketi)
    :packet-rate (r/rand-uniform 1000 6000)
@@ -171,7 +171,7 @@
 
 ;; Normal Email/SMTP Traffic
 (defn normal-email-traffic []
-  {:label :normal
+  {:label "normal"
    
    ;; Volumetrija (nizak rate)
    :packet-rate (r/rand-uniform 800 5000)

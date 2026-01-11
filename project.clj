@@ -6,7 +6,8 @@
                  ;; CSV writer
                  [org.clojure/data.csv "1.1.0"]
                  ;; logging (useful later when simulating attacks)
-                 [org.clojure/tools.logging "1.2.4"]]
+                 [org.clojure/tools.logging "1.2.4"]
+                 [incanter "1.9.3"]]
 
   ;; main namespace entrypoint
   :main ^:skip-aot ddos.core
