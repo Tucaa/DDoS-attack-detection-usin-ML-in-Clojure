@@ -44,13 +44,13 @@
 
 
 (defn generate-complete-dataset [window-ms]
-  (w/generate-timeline window-ms)
+  (w/generate-timeline window-ms
 
    [:normal {:normal-fn normal/normal-mixed-traffic
              :num-windows 500}]
    
    [:attack {:attack-fn attacks/udp-large-packets
-             :attack-type :udp-flood-large}]
+             :attack-type :udp-large-packets}]
    
    [:normal {:normal-fn normal/normal-mixed-traffic
              :num-windows 200}]
@@ -61,10 +61,10 @@
    [:normal {:normal-fn normal/normal-mixed-traffic
              :num-windows 150}]
    
-   [:campaign {:attack-fn attacks/syn-flood
-               :attack-type :syn-flood
-               :num-instances 4
-               :duration-hours 8}]
+  ;;  [:campaign {:attack-fn attacks/syn-flood
+  ;;              :attack-type :syn-flood
+  ;;              :num-instances 4
+  ;;              :duration-hours 8}]
    
    [:normal {:normal-fn normal/normal-mixed-traffic
              :num-windows 300}]
@@ -97,9 +97,9 @@
              :attack-type :subnet-carpet-bombing}]
    
    [:normal {:normal-fn normal/normal-mixed-traffic
-             :num-windows 400}])
-  
+             :num-windows 400}]))
 
+  
 (defn -main [& args]
   (let [window-ms 5000
         data (do

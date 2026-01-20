@@ -4,9 +4,6 @@
 
 ;; F-je koje dodaju vremenske serije podacima
 
-
-
-
 (defn add-window-metadata
   [sample window-id timestamp]
   (assoc sample
@@ -18,7 +15,7 @@
 ;; Napomena -prob parametar je u procentima
 (def attack-pattern-duration
 
-  {:udp-flood-large
+  {:udp-large-packets
    {:min-duration 120
     :max-duration 1800
     :typical-duration 600
@@ -53,6 +50,12 @@
     :long-attack-prob 0.30
     :long-duration-range [5400 14400]}
 
+   :icmp-flood
+   {:min-duration 180
+    :max-duration 1200
+    :typical-duration 420
+    :long-attack-prob 0.12
+    :long-duration-range [1200 2400]}
 
    :subnet-carpet-bombing
    {:min-duration 1800
@@ -72,25 +75,22 @@
 
 
 (defn define-duration
-
   [attack-type]
-  (let [profile (get attack-pattern-duration attack-type)
-        {:keys [min-duration max-duration typical-duration long-attack-prob long-duration-range]} profile]
+  (println attack-type)
+  (let [profile (get attack-pattern-duration attack-type)]
+    (when-not profile
+      (throw (ex-info "Unknown parameter" {:received attack-type :keys attack-pattern-duration})))
 
-    (if (< (rand) long-attack-prob)
-      ;; Dugacak napad
-      (let [[long-min long-max] long-duration-range]
-        (int (r/rand-uniform long-min long-max)))
-
-      ;; Normalni saobracaj
-      (let [dev (/ (- max-duration min-duration) 6.0)
-            duration (r/rand-normal typical-duration dev)]
-        (int (r/clamp duration min-duration max-duration))))))
+    (let [{:keys [min-duration max-duration typical-duration long-attack-prob long-duration-range]} profile]
+      (if (< (rand) long-attack-prob)
+        (let [[long-min long-max] long-duration-range]
+          (int (r/rand-uniform long-min long-max)))
+        (let [dev (/ (- max-duration min-duration) 6.0)
+              duration (r/rand-normal typical-duration dev)]
+          (int (r/clamp duration min-duration max-duration)))))))
 
 
 ;; U buducnosti dodati talase napada posto moze i to da se desi 
-
-
 (defn generate-attack-windows [attack-fn attack-type start-timestap windows-ms]
 
   (let [dur-sec (define-duration attack-type)
