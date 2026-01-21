@@ -61,10 +61,10 @@
    [:normal {:normal-fn normal/normal-mixed-traffic
              :num-windows 150}]
    
-  ;;  [:campaign {:attack-fn attacks/syn-flood
-  ;;              :attack-type :syn-flood
-  ;;              :num-instances 4
-  ;;              :duration-hours 8}]
+   [:vector {:attack-fn attacks/udp-large-packets
+               :attack-type :udp-large-packets
+               :instances 4
+               :duration-hours 8}]
    
    [:normal {:normal-fn normal/normal-mixed-traffic
              :num-windows 300}]

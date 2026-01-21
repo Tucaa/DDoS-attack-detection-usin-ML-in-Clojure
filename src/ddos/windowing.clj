@@ -5,10 +5,11 @@
 ;; F-je koje dodaju vremenske serije podacima
 
 (defn add-window-metadata
-  [sample window-id timestamp]
+  [sample window-id timestamp active_atk]
   (assoc sample
          :window-id window-id
-         :timestamp timestamp))
+         :timestamp timestamp
+         :attack-active active_atk))
 
 
 ;; Karakteristike napada u sekundama
@@ -91,19 +92,49 @@
 
 
 ;; U buducnosti dodati talase napada posto moze i to da se desi 
+
+(defn waves [attack-type]
+  (case attack-type
+    (:dns-amplification :ntp-amplification :udp-flood-mixed) (< (rand) 0.3)
+    (:icmp-flood :udp-large-packets) (< (rand) 0.2)
+    false))
+
+
+(defn wave-pattern [total-dur wave-num]
+  (let [wave-dur (/ total-dur wave-num)
+        ;; Inicijalno razlika imedju talasa  30% ako bude trebalo zameniti
+        quiet-per (* wave-dur 0.3)
+        ]
+
+    (for [i (range wave-num)]
+      {:start-offset (int (* i wave-dur)) :dur (int (* wave-dur 0.7)) :wave-num (inc i)})))
+
+
+
 (defn generate-attack-windows [attack-fn attack-type start-timestap windows-ms]
 
   (let [dur-sec (define-duration attack-type)
-        windows-num (max 1 (int (/ (* dur-sec 1000) windows-ms)))]
+        windows-num (max 1 (int (/ (* dur-sec 1000) windows-ms)))
+        ;; Deo za talase napada
+        muliple-waves (waves attack-type)
+        atk_wave (if muliple-waves
+                   (wave-pattern dur-sec (r/rand-uniform 2 4))
+                   [{:start-offset 0 :dur dur-sec :wave-num 1}])]
     (vec
      (for [i (range windows-num)]
-       (let [;;  time-sec (/ (* i windows-ms) 1000)
-             timestamp (+ start-timestap (* i windows-ms))]
+       (let [time-sec (/ (* i windows-ms) 1000)
+             timestamp (+ start-timestap (* i windows-ms))
+             
+             active-wave (some (fn [{:keys [start-offset dur]}]
+                                 (and (>= time-sec start-timestap)
+                                      (< time-sec (+ start-offset dur))))
+                               atk_wave)] 
 
          (add-window-metadata
           (attack-fn)
           i
-          timestamp))))))
+          timestamp
+          active-wave))))))
 
 ;; Izmenjeno je da se ova funkcija odnosi na normalni saobracaj
 (defn generate-windows-normal
@@ -113,14 +144,17 @@
      (add-window-metadata
       (attack-fn)
       i
-      (+ start-timestamp (* i window-ms))))
+      (+ start-timestamp (* i window-ms))
+      ;; Za normalni saobracaj se uzima da je uvek aktivan
+      true))
+   
    (range n)))
 
 
 ;; Funkcija za generisanje vektora sa svim opsezima instanci napada
 (defn generate-attack-vector
-
   [attack-fn attack-type instances duration-hours start-timestap window-ms]
+  ;; (println "ARGUMENTI F-JE" attack-fn attack-type, instances, duration-hours, start-timestap, window-ms)
   (let [duration-ms (* duration-hours 3600 1000)
         spacing-ms (/ duration-ms instances)]
     (vec
