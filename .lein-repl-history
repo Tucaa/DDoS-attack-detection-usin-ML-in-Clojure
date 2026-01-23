@@ -77,3 +77,31 @@
 (require '[ddos.visualization :as v] :reload)
 (def data (v/load-csv "ddos_dataset.csv"))
 (v/save-graph (v/graph-class-distribution data) "attack_distribution.png")
+(defn generate-timeline
+  [window-ms & attack-specs]
+  (let [start-ts (System/currentTimeMillis)]
+    (loop [curr-time start-ts
+           remaining-specs attack-specs
+           all-windows []]
+      (if (empty? remaining-specs)
+        all-windows
+        (let [[spec-type spec-data] (first remaining-specs)
+              new-window (case spec-type
+                           :attack
+                           (let [{:keys [attack-fn attack-type]} spec-data]
+                             (generate-attack-windows attack-fn attack-type curr-time window-ms))
+                           :vector
+                           (let [{:keys [attack-fn attack-type instances duration-hours]} spec-data]
+                             (generate-attack-vector attack-fn attack-type instances duration-hours curr-time window-ms))
+                           :normal
+                           (let [{:keys [normal-fn num-windows]} spec-data]
+                             (generate-windows-normal normal-fn num-windows curr-time window-ms)))
+              last-ts (if (empty? new-window)
+                        curr-time
+                        (:timestamp (last new-window)))
+              quiet-period-ms (* (r/rand-uniform 5 15) 60 1000) ;; Za pocetak je stavljeno da miran period bude od 5 do 15 min kasnije promentiti
+              next (+ last-ts window-ms quiet-period-ms)]
+          (recur next
+                 (rest remaining-specs)
+                 (concat all-windows new-window)))))))
+q

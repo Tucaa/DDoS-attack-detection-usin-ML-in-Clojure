@@ -65,6 +65,14 @@
     :long-attack-prob 0.35
     :long-duration-range [7200 21600]}
 
+
+   :syn-flood
+   {:min-duration 600
+    :max-duration 3600
+    :typical-duration 1800
+    :long-attack-prob 0.25
+    :long-duration-range [3600 7200]}
+
    ;;  Kod obicnog saobracaja se uzima 
    :normal
    {:min-duration 3600
@@ -95,16 +103,18 @@
 
 (defn waves [attack-type]
   (case attack-type
-    (:dns-amplification :ntp-amplification :udp-flood-mixed) (< (rand) 0.3)
-    (:icmp-flood :udp-large-packets) (< (rand) 0.2)
+    :dns-amplification (< (rand) 0.3)
+    :ntp-amplification (< (rand) 0.3)
+    :udp-flood-mixed (< (rand) 0.3)
+    :icmp-flood (< (rand) 0.3)
+    :udp-large-packets (< (rand) 0.3)
     false))
 
 
 (defn wave-pattern [total-dur wave-num]
   (let [wave-dur (/ total-dur wave-num)
         ;; Inicijalno razlika imedju talasa  30% ako bude trebalo zameniti
-        quiet-per (* wave-dur 0.3)
-        ]
+        quiet-per (* wave-dur 0.3)]
 
     (for [i (range wave-num)]
       {:start-offset (int (* i wave-dur)) :dur (int (* wave-dur 0.7)) :wave-num (inc i)})))
@@ -124,11 +134,11 @@
      (for [i (range windows-num)]
        (let [time-sec (/ (* i windows-ms) 1000)
              timestamp (+ start-timestap (* i windows-ms))
-             
+
              active-wave (some (fn [{:keys [start-offset dur]}]
                                  (and (>= time-sec start-timestap)
                                       (< time-sec (+ start-offset dur))))
-                               atk_wave)] 
+                               atk_wave)]
 
          (add-window-metadata
           (attack-fn)
@@ -147,7 +157,7 @@
       (+ start-timestamp (* i window-ms))
       ;; Za normalni saobracaj se uzima da je uvek aktivan
       true))
-   
+
    (range n)))
 
 
