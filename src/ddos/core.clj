@@ -111,22 +111,24 @@
                           [:normal {:normal-fn normal/normal-mixed-traffic
                                     :num-windows 100}]
                           ;; Ovde se ne gadjaju kako treba parametri proveri gde si pogresio
-                          ;; [:vector {:attack-fn attacks/dns-amplification
-                          ;;             :attack-type :dns-amplification
-                          ;;             :num-instances 3
-                          ;;             :duration-hours 4}]
+                          [:vector {:attack-fn attacks/dns-amplification
+                                    :attack-type :dns-amplification
+                                    :instances 3
+                                    :duration-hours 4}]
                           [:normal {:normal-fn normal/normal-mixed-traffic
                                     :num-windows 100}]
                           [:attack {:attack-fn attacks/subnet-carpet-bombing
                                     :attack-type :subnet-carpet-bombing}])
 
         balanced-samples (mapcat
-                          (fn [attack-type attack-fn]
-                            (repeatedly 100 #(assoc (attack-fn)
-                                                    :label attack-type
-                                                    :window-id -1
-                                                    :timestamp start-ts
-                                                    :attack-active true)))
+                          (fn [attack-type attack-fn] 
+                            (map-indexed (fn [idx sample]
+                                           (assoc sample
+                                                  :label attack-type
+                                                  :window-id idx
+                                                  :timestamp start-ts
+                                                  :attack-active (< (rand) 0.15)))
+                                         (repeatedly 100 attack-fn)))
                           [:udp-flood-large :icmp-flood :udp-flood-mixed
                            :ntp-amplification :ack-flood]
                           [attacks/udp-large-packets attacks/icmp-flood
@@ -147,7 +149,7 @@
         data (do
                (println "Generating dataset")
                (generate-mixed-dataset window-ms))]
-              ;;  (generate-complete-dataset window-ms))]
-              ;;  (generate-complete-dataset window-ms))]
+    ;;  (generate-complete-dataset window-ms))]
+    ;;  (generate-complete-dataset window-ms))]
     (println data)
     (export/write-csv data "new_ddos_dataset.csv")))

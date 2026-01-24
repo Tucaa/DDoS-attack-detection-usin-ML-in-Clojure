@@ -1,16 +1,27 @@
 (ns ddos.windowing
   (:require [ddos.radnom :as r]
-            [incanter.core :as i]))
+            [incanter.core :as i])
+  (:import [java.time Instant ZoneId]
+           [java.time.format DateTimeFormatter]))
+
+
+
+(def date-formatter
+  (-> (DateTimeFormatter/ofPattern "yyyy-MM-dd'T'HH:mm:ss")
+      (.withZone (ZoneId/systemDefault))))
+
+(defn format-timestamp [ms]
+  (.format date-formatter (Instant/ofEpochMilli ms)))
+
 
 ;; F-je koje dodaju vremenske serije podacima
-
 (defn add-window-metadata
   [sample window-id timestamp active_atk]
   (assoc sample
          :window-id window-id
          :timestamp timestamp
-         :attack-active active_atk))
-
+         :ts_formated (format-timestamp timestamp) 
+         :attack-active (boolean active_atk)))
 
 ;; Karakteristike napada u sekundama
 ;; Napomena -prob parametar je u procentima
@@ -100,15 +111,15 @@
 
 
 ;; U buducnosti dodati talase napada posto moze i to da se desi 
-
 (defn waves [attack-type]
-  (case attack-type
-    :dns-amplification (< (rand) 0.3)
-    :ntp-amplification (< (rand) 0.3)
-    :udp-flood-mixed (< (rand) 0.3)
-    :icmp-flood (< (rand) 0.3)
-    :udp-large-packets (< (rand) 0.3)
-    false))
+  (let [wave-probability {:syn-flood 0.3
+                          :dns-amplification 0.7
+                          :ntp-amplification 0.6
+                          :udp-flood-mixed 0.5
+                          :icmp-flood 0.4
+                          :subnet-carpet-bombing 0.6
+                          :ack-flood 0.2}]
+    (< (rand) (get wave-probability attack-type 0.5))))
 
 
 (defn wave-pattern [total-dur wave-num]
@@ -135,10 +146,11 @@
        (let [time-sec (/ (* i windows-ms) 1000)
              timestamp (+ start-timestap (* i windows-ms))
 
-             active-wave (some (fn [{:keys [start-offset dur]}]
-                                 (and (>= time-sec start-timestap)
+             in-wave (some (fn [{:keys [start-offset dur]}]
+                                 (and (>= time-sec start-offset)
                                       (< time-sec (+ start-offset dur))))
-                               atk_wave)]
+                               atk_wave)
+             active-wave (and in-wave (> (rand) 0.1))]
 
          (add-window-metadata
           (attack-fn)
