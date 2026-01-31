@@ -1,27 +1,28 @@
 (ns ddos.visualization
   (:require [incanter.core :as i]
             [incanter.charts :as c]
+            ;; [incanter.io :as inc-io]
             [incanter.stats :as s]
             [clojure.data.csv :as csv]
             [clojure.java.io :as io]))
 
 
-(defn parse-number [s]
-  (try
-    (if (string? s)
-      (Double/parseDouble s)
-      s)
-    (catch Exception _ nil)))
+(defn parse-value [s]
+  (cond
+    (nil? s) nil
+    (= s "true") true
+    (= s "false") false
+    :else (try (Double/parseDouble s)
+               (catch Exception _ s))))
 
 (defn load-csv [filepath]
   (with-open [reader (io/reader filepath)]
-    (let [data (csv/read-csv reader)
+    ;; Loaduje se celokupni csv u memoriju
+    (let [data (doall (csv/read-csv reader))
           headers (map keyword (first data))
           rows (rest data)]
       (i/dataset headers
-                 (map (fn [row]
-                        (map parse-number row))
-                      rows)))))
+                 (map (fn [row] (map parse-value row)) rows)))))
 
 (defn save-graph [graph filename]
   (i/save graph filename :width 800 :height 600))
@@ -48,6 +49,21 @@
     i/view))
 
 
+(defn packet-rate-boxplot [dataset]
+  (let [labels (distinct (i/$ :label dataset))]
+    (doto (c/box-plot (i/$ :packet-rate (i/$where {:label (first labels)} dataset))
+                      :title "Packet rate distribution"
+                      :y-label "Packet rate"
+                      :series-label (str (first labels))
+                      :legend true)
+      (#(do
+          (doseq [label (rest labels)]
+            (c/add-box-plot % (i/$ :packet-rate (i/$where {:label label} dataset))
+                            :series-label (str label)))
+          %))
+      i/view)))
+
+
 
 
 (defn packet-size|rate-ratio [dataset]
@@ -66,13 +82,14 @@
 
 (defn graph-protocol-distribution [dataset]
   (let [labels (distinct (i/$ :label dataset))
-        data (for [label labels]
-               (let [subset (i/$where {:label label} dataset)
-                     n (i/nrow subset)]
+        ;; Vidi da ovaj deo malo elegantinje sredis (ili da napises test za funkcije za grafike)
+        clean-labels (remove nil? labels)
+        data (for [label clean-labels]
+               (let [subset (i/$where {:label label} dataset)]
                  {:class (str label)
-                  :UDP (/ (reduce + (i/$ :udp-ratio subset)) n)
-                  :TCP (/ (reduce + (i/$ :tcp-ratio subset)) n)
-                  :ICMP (/ (reduce + (i/$ :icmp-ratio subset)) n)}))]
+                  :UDP (or (s/mean (i/$ :udp-ratio subset)) 0)
+                  :TCP (or (s/mean (i/$ :tcp-ratio subset)) 0)
+                  :ICMP (or (s/mean (i/$ :icmp-ratio subset)) 0)}))]
 
     (let [classes (map :class data)
           udp-vals (map :UDP data)
@@ -80,15 +97,60 @@
           icmp-vals (map :ICMP data)
 
           chart (c/bar-chart classes udp-vals
-                             :title "Average protocl ratios by class"
+                             :title "Average protocol ratios by clas"
                              :x-label "Attack type"
                              :y-label "Ratio"
                              :series-label "UDP"
                              :legend true)]
 
-      (c/add-categories chart classes tcp-vals :series-label "TCP")
-      (c/add-categories chart classes icmp-vals :series-label "ICMP")
+      (c/add-categories chart tcp-vals classes :series-label "TCP")
+      (c/add-categories chart icmp-vals classes :series-label "ICMP")
+
       (i/view chart))))
+
+
+;; Ista logika kao prethodni vidi da namestis univerzalnu f-ju
+(defn graph-tcp-flags [dataset]
+  (let [labels (distinct (i/$ :label dataset))
+        ;; Vidi da ovaj deo malo elegantinje sredis (ili da napises test za funkcije za grafike)
+        clean-labels (remove nil? labels)
+        data (for [label clean-labels]
+               (let [subset (i/$where {:label label} dataset)]
+                 {:class (str label)
+                  :SYN (or (s/mean (i/$ :tcp-syn-ratio subset)) 0)
+                  :ACK (or (s/mean (i/$ :tcp-ack-ratio subset)) 0)
+                  :FIN (or (s/mean (i/$ :tcp-fin-ratio subset)) 0)}))]
+
+    (let [classes (map :class data)
+          syn-vals (map :SYN data)
+          ack-vals (map :ACK data)
+          fin-vals (map :FIN data)
+
+          chart (c/bar-chart classes syn-vals
+                             :title "Average protocol ratios by tcp flags"
+                             :x-label "Attack type"
+                             :y-label "Ratio"
+                             :series-label "UDP"
+                             :legend true)]
+
+      (c/add-categories chart ack-vals classes :series-label "ACK")
+      (c/add-categories chart fin-vals classes :series-label "FIN")
+
+      (i/view chart))))
+
+
+
+(defn graph-entropy|unique-ips [dataset]
+  (doto (c/scatter-plot
+         (i/$ :unique-src-ips dataset)
+         (i/$ :src-ip-entropy dataset)
+         :title "Source IP entropy vs unique source ips"
+         :x-label "Unique source IP"
+         :y-label "IP entropy"
+         :group-by (i/$ :label dataset)
+         :legend true)
+    i/view))
+
 
 
 (defn dataset-statistics [dataset]
@@ -122,18 +184,15 @@
 
 ;; Trebaces da dodas grafike za vremensku raspodelu napada
 
-
-;; (def temp-analysis [filepath] 
-
-;;   (let [data (load-csv filepath)])
-;; )
-
 (defn sumary-fn [filepath]
   (let [dataset (load-csv filepath)]
     (dataset-statistics dataset)
     (packet-size|rate-ratio  dataset)
     (graph-packet-rate-histogram dataset)
     (graph-protocol-distribution dataset)
-    (graph-class-distribution dataset)
+    (graph-tcp-flags dataset)
+    (graph-entropy|unique-ips dataset)
+    ;; (graph-class-distribution dataset)
+    (packet-rate-boxplot dataset)
     dataset))
 

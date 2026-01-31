@@ -17,9 +17,9 @@
 
 
 ;; Shanon entropija
-(defn calculate-entropy
-  [unique-count total-items]
-  (if (or (zero? unique-count) (zero? total-items))
-    0.0
-    (let [p (/ unique-count total-items)]
-      (* -1 p (Math/log p)))))
+;; (defn calculate-entropy
+;;   [unique-count total-items]
+;;   (if (or (zero? unique-count) (zero? total-items))
+;;     0.0
+;;     (let [p (/ unique-count total-items)]
+;;       (* -1 p (Math/log p)))))
