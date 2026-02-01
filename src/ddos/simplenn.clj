@@ -1,6 +1,6 @@
 (ns ddos.simplenn
   (:require [uncomplicate.neanderthal.core :as cor]
-            [uncomplicate.neanderthal.native :as ntv] 
+            [uncomplicate.neanderthal.native :as ntv]
             [uncomplicate.neanderthal.random :refer [rand-uniform!]]))
 
 (defn sigmoid! [n]
@@ -10,7 +10,7 @@
         (cor/entry! n i (/ 1 (+ 1 (Math/exp (- j))))))))
   n)
 
-(defn create-layer [input-size output-size]
+(defn create-layer [input-size output-size activation-fn]
   ;; Moraces da napises testove koji ce proveravati da li unos validan
   {:pre [(pos-int? input-size) (pos-int? output-size)]}
   (let [weights (ntv/fge output-size input-size)
@@ -23,15 +23,48 @@
     {:weights weights
      :bias  bias
      :input-size  input-size
-     :output-size output-size}))
+     :output-size output-size
+     :activation activation-fn}))
+
+(defn forward [layer input]
+  ;; Uradi test za validaciju
+  ;;  Za linearnu funkciju formula x = weight * input + bias | Nelinearna je fja aktivacije na linearni deo = y activation(x)
+  (let [{:keys [weights bias activation]} layer
+        x (cor/axpy! 1.0 bias (cor/mv weights input))
+        y (activation x)]
+    {:x x :y y}))
+
+(defn nn-forward [input network]
+  ;; Trebaces da dodas test za kompatibilnost slojeva
+  (let [initial {:act [] :curr input}
+        final
+        (reduce
+         (fn [state layer]
+           (let [curr (:curr state)
+                 layer-res (forward layer curr)
+                 new-act (conj (:act state) layer-res)]
+             {:act new-act
+              :curr (:y layer-res)}))
+         initial
+         network)]
+    final))
+
 
 ;; A ovde ces da napises test za komatibilnost sloja i unosa moraju da se gadjaju dimenzije matrica!!!!!!!
-(defn network [layer input]
-  (let [w (:weights layer)
-        b (:bias layer)
+;; (defn network [layer input]
+;;   (let [w (:weights layer)
+;;         b (:bias layer)
 
-        output (cor/copy! b (ntv/fv (:output-size layer)))]
-    (cor/mv! w input output))
-  )
+;;         output (cor/copy! b (ntv/fv (:output-size layer)))]
+;;     (cor/mv! w input output)))
 
+(def nn [(create-layer 4 8 sigmoid!)
+         (create-layer 8 6 sigmoid!)
+         (create-layer 6 2 sigmoid!)])
+
+(def input (ntv/fv [1.1 2.2 3.3 4.4]))
+
+
+(def result (nn-forward input nn))
   
+

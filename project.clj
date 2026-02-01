@@ -10,9 +10,10 @@
                   :exclusions [org.bytedeco/cuda-platform
                                org.bytedeco/dnnl-platform]]
                  [uncomplicate/neanderthal "0.60.0"]
-                ;;  [org.bytedeco/mkl "2025.2-1.5.12" :classifier "windows-x86_64"]
+                 ;;  [org.bytedeco/mkl "2025.2-1.5.12" :classifier "windows-x86_64"]
                  [org.bytedeco/mkl "2025.2-1.5.12" :classifier "windows-x86_64-redist"]
-                 [incanter "1.9.3"]]
+                 [incanter "1.9.3"]
+                 [midje "1.10.10"]]
 
   :repositories [["clojars" "https://repo.clojars.org/"]
                  ["central" "https://repo1.maven.org/maven2/"]]
