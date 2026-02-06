@@ -63,8 +63,27 @@
          network)]
     final))
 
-;; x 
-;; (defn cross-entropy [x y])
+
+
+;;  Kros entropija za jedan vektor
+(defn cross-entropy [vec class-idx]
+  (let [max-val (cor/amax vec)
+        shifted (doto (cor/copy vec)
+                  (#(dotimes [i (cor/dim %)]
+                      (cor/entry! % i (- (cor/entry % i) max-val)))))
+        ;; shifted (cor/axpy! -1 max-val (cor/copy vec))
+        sum-exp (+ max-val (m/log (cor/sum (v/exp! shifted))))
+        final-vec (cor/entry vec class-idx)]
+    (- sum-exp final-vec)))
+
+
+;;  Kros entropija za ceo batch
+(defn cross-entropy-batch [vec all-class-idx]
+  (let [batch-size (cor/mrows vec)
+        losses (for [i (range batch-size)]
+                 (cross-entropy (cor/row vec i)
+                                (cor/entry all-class-idx i)))]
+    (/ (reduce + 0.0 losses) batch-size)))
 
 
 ;; Normalizacija vektora u raspodelu verovatnoce
@@ -75,7 +94,7 @@
     (dotimes [i n]
       (let [x (cor/entry v i)]
         (cor/entry! v i (- x m))))
-    (v/exp! v) 
+    (v/exp! v)
     (let [s (cor/sum v)]
       (cor/scal! (/ 1.0 s) v))
 
@@ -109,8 +128,12 @@
                 0.1 0.2 0.3 0.4
                 -1.0 -2.0 -3.0 -4.0]))
 
+(def classes (ntv/iv 1 2 3))
+
 (defn test-softmax [data]
   (doseq [j (range (cor/mrows data))]
     (softmax! (cor/row data j)))
   data)
+
+(println "Cross entropy test" (cross-entropy-batch test-data classes))
 
