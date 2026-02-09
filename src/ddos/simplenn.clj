@@ -100,8 +100,102 @@
 
     v))
 
-;; (defn backpropagation [input output network]
-;;   (let))
+
+;; Racunanje inicijalnog gradijenta (izlaznog sloja: softmax + cross-entropy)
+(defn init-gradient [output class-idx]
+  (let [grad (cor/copy output)]
+    (cor/entry! grad class-idx
+                (- (cor/entry grad class-idx) 1.0))
+
+    grad))
+
+
+;; Fja koja izvlaci input odredjenog sloja (unazad!)
+(defn reverse-layer-iput [act input layer-idx tot-layers]
+  ;; Dodaj test za proveru argumenata kasnije !
+  (if (= layer-idx (dec tot-layers))
+    input
+    (:y (nth (reverse (:act act)) (inc layer-idx)))))
+
+
+;; Fja za racunanje gradijenta sloja
+(defn layer-gradients [grad curr-ac layer-input]
+  (let [act-der (sigmoid-der! (cor/copy (:y curr-ac)))
+        grad-x (v/mul! grad act-der)
+        ;; grad-x (cor/emul! grad act-der)
+        ;; grad-x (cor/mul! grad act-der)
+        ;; Spoljni proizvod!
+        n (cor/dim grad-x)
+        m (cor/dim layer-input)
+        grad-weight (ntv/dge n m)]
+    (doseq [i (range n)
+            j (range m)]
+
+      (cor/entry! grad-weight i j (* (cor/entry grad-x i)
+                                     (cor/entry layer-input j))))
+    ;; grad-x-col (ntv/dge n 1)
+    ;; _ (cor/copy! grad-x-col grad-x)
+    ;; layer-input-row (ntv/dge 1 m)
+    ;; _ (cor/copy! layer-input-row layer-input)
+    ;; grad-weight (cor/mm grad-x-col layer-input-row)
+    ;; grad-weight (cor/mm
+    ;;              (ntv/resh grad-x [(cor/dim grad-x) 1])
+    ;;              (ntv/reshape! layer-input [1 (cor/dim layer-input)]))
+    ;; grad-weight (cor/mm
+    ;;              (cor/ge (cor/dim grad-x) 1 grad-x)
+    ;;              (cor/ge 1 (cor/dim layer-input) layer-input))
+    ;; grad-bias (cor/copy grad-x)]
+
+    {:grad-x grad-x :grad-weight grad-weight :grad-bias (cor/copy grad-x)}))
+
+;; Updejtovanje parametra layera
+(defn update-layer! [layer grads learning-rate]
+  (cor/axpy! (- learning-rate) (:grad-weight grads) (:weights layer))
+  (cor/axpy! (- learning-rate) (:grad-bias grads) (:bias layer))
+  layer)
+
+
+;; Propagacija gradijanta unazad
+(defn propagate-backwards [layer grad-x]
+  (cor/mv (cor/trans (:weights layer)) grad-x))
+
+;; Funkcija za backpropagaciju jednog sloja
+(defn backpropagation-singular [layer act layer-input grad learing-rate]
+  (let [grads (layer-gradients grad act layer-input)]
+
+    (update-layer! layer grads learing-rate)
+    (propagate-backwards layer (:grad-x grads))))
+
+
+;; Backpropagacija cele mreze
+(defn backpropagation [nn act class-idx learing-rate]
+  (let [last-act (last (:act act))
+        output (:y last-act)
+        orig-input (:curr act)
+        init-grad (init-gradient output class-idx)
+        reversed-nn (reverse nn)
+        reversed-act (reverse (:act act))
+        tot-layers (count nn)]
+
+
+    (loop [layers reversed-nn
+           act reversed-act
+           grad init-grad
+           idx 0]
+
+      ;; Uslov za zavrsetak
+      (if (empty? layers)
+        nn
+
+        (let [curr-layer (first layers)
+              curr-act (first act)
+              layer-input (reverse-layer-iput act orig-input idx tot-layers)
+              next-grad (backpropagation-singular curr-layer curr-act layer-input grad learing-rate)]
+
+          (recur (rest layers)
+                 (rest (act))
+                 (next-grad)
+                 (inc idx)))))))
 
 
 ;; A ovde ces da napises test za komatibilnost sloja i unosa moraju da se gadjaju dimenzije matrica!!!!!!!
@@ -136,4 +230,86 @@
   data)
 
 (println "Cross entropy test" (cross-entropy-batch test-data classes))
+
+
+(def grd-data (ntv/dv [0.1 0.5 0.2]))
+
+(println "Testing of initial grad fn" (init-gradient grd-data 2))
+
+(def act-test
+  {:act [{:y (ntv/dv [1 2])}
+         {:y (ntv/dv [3 4])}
+         {:y (ntv/dv [5 6])}
+         {:y (ntv/dv [7 8])}]})
+
+(def i (ntv/dv [9 9]))
+
+(println "Testing of reverse-layer-input" (reverse-layer-iput act-test i 2 4))
+
+
+(def grad-test (ntv/dv [0.1 0.2]))
+(def cur-ac-test {:y (ntv/dv [0.4 0.6])})
+(def layer-input-test (ntv/dv [1.0 2.0]))
+;; (def layer-input-test (ntv/dv [1.0 2.0 3.0]))
+
+
+(def test-layer-gradients (layer-gradients grad-test cur-ac-test layer-input-test))
+
+(println "x-grad" (:grad-x test-layer-gradients))
+(println "weight grad" (:grad-weight test-layer-gradients))
+(println "bias grad" (:grad-bias test-layer-gradients))
+
+
+(def test-layer {:weights (ntv/dge 2 2 [0.1 0.2
+                                        0.7 -0.5])
+                 :bias (ntv/dv [0.0 0.0])})
+
+(def new-grad-test {:grad-weight (ntv/dge 2 2 [0.01 0.02
+                                               -0.03 0.04])
+                    :grad-bias (ntv/dv [0.1 -0.1])})
+
+
+(def class-idx 1)
+(def learing-rate 0.1)
+
+(def test-updated-layer (update-layer! test-layer new-grad-test learing-rate))
+(println "updated weights" (:weights test-updated-layer))
+(println "updated bias" (:bias test-updated-layer))
+
+(def poropagated (propagate-backwards test-layer (ntv/dv [0.5 -0.2])))
+(println "propagated" poropagated)
+(doseq [i (range (cor/dim poropagated))]
+  (println "prop[" i "]" (cor/entry poropagated i))
+  )
+
+(def test-backpropagate-singular (backpropagation-singular test-layer cur-ac-test layer-input-test grad-test learing-rate))
+(println "propagated" test-backpropagate-singular)
+(doseq [i (range (cor/dim test-backpropagate-singular))]
+  (println "prev-grad[" i "]" (cor/entry test-backpropagate-singular i)))
+
+(def nn-test
+  [{:weights (ntv/dge 2 2 [0.1 0.2
+                            0.3 0.4])
+    :bias (ntv/dv [0.0 0.0])}
+   {:weights (ntv/dge 2 2 [0.5 0.6
+                            0.7 0.8])
+    :bias (ntv/dv [0.0 0.0])}])
+
+;; Aktivacije
+(def act-test
+  {:curr (ntv/dv [1.0 2.0])           
+   :act [{:y (ntv/dv [0.1 0.2])}      
+         {:y (ntv/dv [0.3 0.7])}]})
+
+
+
+(def updated-nn (backpropagation nn-test act-test class-idx learing-rate))
+(doseq [layer updated-nn
+        :let [W (:weights layer)
+              b (:bias layer)]]
+  (println "pdated weights")
+  (doseq [i (range (cor/dim W 0))
+          j (range (cor/dim W 1))]
+    (println "W[" i "," j "] =" (cor/entry W i j)))
+  (println "updated bias" b))
 

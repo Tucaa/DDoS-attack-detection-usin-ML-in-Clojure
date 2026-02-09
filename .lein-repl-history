@@ -382,3 +382,6 @@ q
 (print nn/classes)
 (require '[ddos.simplenn :as nn :reload true])
 (nn/test-softmax )
+(require '[ddos.simplenn  :reload true])
+(require '[ddos.simplenn  :reload true])\
+(require '[ddos.simplenn  :reload true])
