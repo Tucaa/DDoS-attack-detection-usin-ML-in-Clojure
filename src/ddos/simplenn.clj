@@ -9,258 +9,348 @@
 
 ;; Kasnije optimizovati
 (defn sigmoid! [n]
-  (let [vec-size (cor/dim n)]
-    (dotimes [i vec-size]
-      (let [j (cor/entry n i)]
-        (cor/entry! n i (/ 1 (+ 1 (Math/exp (- j))))))))
-  n)
+  (try
+    (let [vec-size (cor/dim n)]
+      (dotimes [i vec-size]
+        (let [j (cor/entry n i)]
+          (cor/entry! n i (/ 1 (+ 1 (Math/exp (- j))))))))
+
+    n
+    (catch Exception e
+      (println "Exception sigmoid!" (.getMessage e))
+      (throw e))))
 
 
 ;; σ'(x) = σ(x) * (1 - σ(x))
 (defn sigmoid-der! [n]
-  (let [vec-size (cor/dim n)]
-    (dotimes [i vec-size]
-      (let [j (cor/entry n i)]
-        (cor/entry! n i (* j (- 1 j))))))
-  ;; (cor/entry! n i (* j (- 1 j))))))
-  n)
+  (try
+    (let [vec-size (cor/dim n)]
+      (dotimes [i vec-size]
+        (let [j (cor/entry n i)]
+          (cor/entry! n i (* j (- 1 j))))))
+    ;; (cor/entry! n i (* j (- 1 j))))))
+    n
+    (catch Exception e
+      (println "Exception sigmoid-der!" (.getMessage e))
+      (throw e))))
 
 (defn create-layer [input-size output-size activation-fn]
   ;; Moraces da napises testove koji ce proveravati da li unos validan
-  {:pre [(pos-int? input-size) (pos-int? output-size)]}
-  (let [weights (ntv/fge output-size input-size)
-        bias  (ntv/fv output-size)]
+  (try
+    {:pre [(pos-int? input-size) (pos-int? output-size)]}
+    (let [weights (ntv/fge output-size input-size)
+          bias  (ntv/fv output-size)]
 
-    ;; Za pocetak ovako posle dodaj nesto bolje
-    (rand-uniform! -1.0 1.0 weights)
-    (rand-uniform! -1.0 1.0 bias)
+      ;; Za pocetak ovako posle dodaj nesto bolje
+      (rand-uniform! -1.0 1.0 weights)
+      (rand-uniform! -1.0 1.0 bias)
 
-    {:weights weights
-     :bias  bias
-     :input-size  input-size
-     :output-size output-size
-     ;;  Elegantnije uradi
-     :activation activation-fn}))
+      {:weights weights
+       :bias  bias
+       :input-size  input-size
+       :output-size output-size
+       ;;  Elegantnije uradi
+       :activation activation-fn})
+    (catch Exception e
+      (println "Exception create-layer" (.getMessage e))
+      (throw e))))
 
 (defn forward [layer input]
   ;; Uradi test za validaciju
   ;;  Za linearnu funkciju formula x = weight * input + bias | Nelinearna je fja aktivacije na linearni deo = y activation(x)
-  (let [{:keys [weights bias activation]} layer
-        linear (cor/mv weights input)
-        x (cor/axpy! 1.0 bias linear)
-        ;; x (cor/axpy! 1.0 bias (cor/mv weights input))
-        y (activation x)]
-    {:x x :y y}))
+  (try
+    (let [{:keys [weights bias activation]} layer
+          linear (cor/mv weights input)
+          x (cor/axpy! 1.0 bias linear)
+          ;; x (cor/axpy! 1.0 bias (cor/mv weights input))
+          y (activation x)]
+      {:x x :y y})
+    (catch Exception e
+      (println "Exception forward" (.getMessage e))
+      (throw e))))
 
 (defn nn-forward [input network]
   ;; Trebaces da dodas test za kompatibilnost slojeva
-  (let [initial {:act [] :curr input}
-        final
-        (reduce
-         (fn [state layer]
-           (let [curr (:curr state)
-                 layer-res (forward layer curr)
-                 new-act (conj (:act state) layer-res)]
-             {:act new-act
-              :curr (:y layer-res)}))
-         initial
-         network)]
-    final))
-
+  (try
+    (let [initial {:act [] :curr input}
+          final
+          (reduce
+           (fn [state layer]
+             (let [curr (:curr state)
+                   layer-res (forward layer curr)
+                   new-act (conj (:act state) layer-res)]
+               {:act new-act
+                :curr (:y layer-res)}))
+           initial
+           network)]
+      final)
+    (catch Exception e
+      (println "Exception nn-forward" (.getMessage e))
+      (throw e))))
 
 
 ;;  Kros entropija za jedan vektor
 (defn cross-entropy [vec class-idx]
-  (let [max-val (cor/amax vec)
-        shifted (doto (cor/copy vec)
-                  (#(dotimes [i (cor/dim %)]
-                      (cor/entry! % i (- (cor/entry % i) max-val)))))
-        ;; shifted (cor/axpy! -1 max-val (cor/copy vec))
-        sum-exp (+ max-val (m/log (cor/sum (v/exp! shifted))))
-        final-vec (cor/entry vec class-idx)]
-    (- sum-exp final-vec)))
+  (try
+    (let [max-val (cor/amax vec)
+          shifted (doto (cor/copy vec)
+                    (#(dotimes [i (cor/dim %)]
+                        (cor/entry! % i (- (cor/entry % i) max-val)))))
+          ;; shifted (cor/axpy! -1 max-val (cor/copy vec))
+          sum-exp (+ max-val (m/log (cor/sum (v/exp! shifted))))
+          final-vec (cor/entry vec class-idx)]
+      (- sum-exp final-vec))
+    (catch Exception e
+      (println "Exception cross-entropy" (.getMessage e))
+      (throw e))))
+
 
 
 ;;  Kros entropija za ceo batch
 (defn cross-entropy-batch [vec all-class-idx]
-  (let [batch-size (cor/mrows vec)
-        losses (for [i (range batch-size)]
-                 (cross-entropy (cor/row vec i)
-                                (cor/entry all-class-idx i)))]
-    (/ (reduce + 0.0 losses) batch-size)))
+  (try
+    (let [batch-size (cor/mrows vec)
+          losses (for [i (range batch-size)]
+                   (cross-entropy (cor/row vec i)
+                                  (cor/entry all-class-idx i)))]
+      (/ (reduce + 0.0 losses) batch-size))
+    (catch Exception e
+      (println "Exception cross-entropy-batch" (.getMessage e))
+      (throw e))))
+
 
 
 ;; Normalizacija vektora u raspodelu verovatnoce
 (defn softmax! [v]
-  (let [m (cor/amax v)
-        n (cor/dim v)]
-    ;; v = v - m
-    (dotimes [i n]
-      (let [x (cor/entry v i)]
-        (cor/entry! v i (- x m))))
-    (v/exp! v)
-    (let [s (cor/sum v)]
-      (cor/scal! (/ 1.0 s) v))
+  (try
+    (let [m (cor/amax v)
+          n (cor/dim v)]
+      ;; v = v - m
+      (dotimes [i n]
+        (let [x (cor/entry v i)]
+          (cor/entry! v i (- x m))))
+      (v/exp! v)
+      (let [s (cor/sum v)]
+        (cor/scal! (/ 1.0 s) v))
 
-    v))
+      v)
+    (catch Exception e
+      (println "Exception softmax!" (.getMessage e))
+      (throw e))))
+
 
 
 ;; Racunanje inicijalnog gradijenta (izlaznog sloja: softmax + cross-entropy)
 (defn init-gradient [output class-idx]
-  (let [grad (cor/copy output)]
-    (cor/entry! grad class-idx
-                (- (cor/entry grad class-idx) 1.0))
+  (try
+    (let [grad (cor/copy output)]
+      (cor/entry! grad class-idx
+                  (- (cor/entry grad class-idx) 1.0))
 
-    grad))
+      grad)
+    (catch Exception e
+      (println "Exception init-gradient" (.getMessage e))
+      (throw e))))
+
 
 
 ;; Fja koja izvlaci input odredjenog sloja (unazad!)
 (defn reverse-layer-iput [act input layer-idx tot-layers]
-  ;; Dodaj test za proveru argumenata kasnije !
-  (if (= layer-idx (dec tot-layers))
-    input
-    (:y (nth (reverse (:act act)) (inc layer-idx)))))
+  (try
+    (if (= layer-idx (dec tot-layers))
+      input
+      (:y (nth (reverse (:act act)) (inc layer-idx))))
+    (catch Exception e
+      (println "Exception reverse-layer-input" (.getMessage e))
+      (throw e))))
+;; Dodaj test za proveru argumenata kasnije !
+
 
 
 ;; Fja za racunanje gradijenta sloja
 (defn layer-gradients [grad curr-ac layer-input]
-  (let [act-der (sigmoid-der! (cor/copy (:y curr-ac)))
-        ;; (let [act-der (sigmoid-der! (cor/copy (:y curr-ac)))
-        grad-x (v/mul! grad act-der)
-        ;; grad-x (cor/emul! grad act-der)
-        ;; grad-x (cor/mul! grad act-der)
-        ;; Spoljni proizvod!
-        n (cor/dim grad-x)
-        m (cor/dim layer-input)
-        grad-weight (ntv/dge n m)]
-    (doseq [i (range n)
-            j (range m)]
+  (try
+    (let [act-der (sigmoid-der! (cor/copy (:y curr-ac)))
+          ;; (let [act-der (sigmoid-der! (cor/copy (:y curr-ac)))
+          grad-x (v/mul! grad act-der)
+          ;; grad-x (cor/emul! grad act-der)
+          ;; grad-x (cor/mul! grad act-der)
+          ;; Spoljni proizvod!
+          n (cor/dim grad-x)
+          m (cor/dim layer-input)
+          grad-weight (ntv/dge n m)]
+      (doseq [i (range n)
+              j (range m)]
 
-      (cor/entry! grad-weight i j (* (cor/entry grad-x i)
-                                     (cor/entry layer-input j))))
-    ;; grad-x-col (ntv/dge n 1)
-    ;; _ (cor/copy! grad-x-col grad-x)
-    ;; layer-input-row (ntv/dge 1 m)
-    ;; _ (cor/copy! layer-input-row layer-input)
-    ;; grad-weight (cor/mm grad-x-col layer-input-row)
-    ;; grad-weight (cor/mm
-    ;;              (ntv/resh grad-x [(cor/dim grad-x) 1])
-    ;;              (ntv/reshape! layer-input [1 (cor/dim layer-input)]))
-    ;; grad-weight (cor/mm
-    ;;              (cor/ge (cor/dim grad-x) 1 grad-x)
-    ;;              (cor/ge 1 (cor/dim layer-input) layer-input))
-    ;; grad-bias (cor/copy grad-x)]
+        (cor/entry! grad-weight i j (* (cor/entry grad-x i)
+                                       (cor/entry layer-input j))))
+      ;; grad-x-col (ntv/dge n 1)
+      ;; _ (cor/copy! grad-x-col grad-x)
+      ;; layer-input-row (ntv/dge 1 m)
+      ;; _ (cor/copy! layer-input-row layer-input)
+      ;; grad-weight (cor/mm grad-x-col layer-input-row)
+      ;; grad-weight (cor/mm
+      ;;              (ntv/resh grad-x [(cor/dim grad-x) 1])
+      ;;              (ntv/reshape! layer-input [1 (cor/dim layer-input)]))
+      ;; grad-weight (cor/mm
+      ;;              (cor/ge (cor/dim grad-x) 1 grad-x)
+      ;;              (cor/ge 1 (cor/dim layer-input) layer-input))
+      ;; grad-bias (cor/copy grad-x)]
 
-    {:grad-x grad-x :grad-weight grad-weight :grad-bias (cor/copy grad-x)}))
+      {:grad-x grad-x :grad-weight grad-weight :grad-bias (cor/copy grad-x)})
+
+    (catch Exception e
+      (println "Exception layer-gradients" (.getMessage e))
+      (throw e))))
+
 
 ;; Updejtovanje parametra layera
 (defn update-layer! [layer grads learning-rate]
-  (cor/axpy! (- learning-rate) (:grad-weight grads) (:weights layer))
-  (cor/axpy! (- learning-rate) (:grad-bias grads) (:bias layer))
-  layer)
+  (try
+    (cor/axpy! (- learning-rate) (:grad-weight grads) (:weights layer))
+    (cor/axpy! (- learning-rate) (:grad-bias grads) (:bias layer))
+    layer
+
+    (catch Exception e
+      (println "Exception update-layer" (.getMessage e))
+      (throw e))))
+
 
 
 ;; Propagacija gradijanta unazad
 (defn propagate-backwards [layer grad-x]
-  (cor/mv (cor/trans (:weights layer)) grad-x))
+  (try
+    (cor/mv (cor/trans (:weights layer)) grad-x)
+    (catch Exception e
+      (println "Exception propagate-backwards" (.getMessage e))
+      (throw e))))
 
 ;; Funkcija za backpropagaciju jednog sloja
 (defn backpropagation-singular [layer act layer-input grad learing-rate]
-  (let [grads (layer-gradients grad act layer-input)]
+  (try
+    (let [grads (layer-gradients grad act layer-input)]
 
-    (update-layer! layer grads learing-rate)
-    (propagate-backwards layer (:grad-x grads))))
+      (update-layer! layer grads learing-rate)
+      (propagate-backwards layer (:grad-x grads)))
+
+
+    (catch Exception e
+      (println "Exception backpropagation-singular" (.getMessage e))
+      (throw e))))
 
 
 ;; Backpropagacija cele mreze
 (defn backpropagation [nn act class-idx learing-rate]
-  (let [last-act (last (:act act))
-        output (:y last-act)
-        orig-input (:curr act)
-        init-grad (init-gradient output class-idx)
-        reversed-nn (reverse nn)
-        ;; Vraca sve sem poslednjeg 
-        layer-inputs (reverse (cons orig-input (map :y (butlast (:act act)))))
-        reversed-act (reverse (:act act))]
-    ;; reversed-act (reverse (:act act))
-    ;; tot-layers (count nn)]
+  (try
 
-    (loop [layers reversed-nn
-           act reversed-act
-           inputs layer-inputs
-           grad init-grad]
-      ;;  grad init-grad
-      ;;  idx 0]
+    (let [last-act (last (:act act))
+          output (:y last-act)
+          orig-input (:curr act)
+          init-grad (init-gradient output class-idx)
+          reversed-nn (reverse nn)
+          ;; Vraca sve sem poslednjeg 
+          layer-inputs (reverse (cons orig-input (map :y (butlast (:act act)))))
+          reversed-act (reverse (:act act))]
+      ;; reversed-act (reverse (:act act))
+      ;; tot-layers (count nn)]
 
-      ;; Uslov za zavrsetak
-      (if (empty? layers)
-        nn
+      (loop [layers reversed-nn
+             act reversed-act
+             inputs layer-inputs
+             grad init-grad]
+        ;;  grad init-grad
+        ;;  idx 0]
 
-        (let [curr-layer (first layers)
-              curr-act (first act)
-              curr-input (first inputs)
-              ;; layer-input (reverse-layer-iput act orig-input idx tot-layers)
-              next-grad (backpropagation-singular curr-layer curr-act curr-input grad learing-rate)]
-          ;; next-grad (backpropagation-singular curr-layer curr-act layer-input grad learing-rate)]
+        ;; Uslov za zavrsetak
+        (if (empty? layers)
+          nn
 
-          (recur (rest layers)
-                 (rest act)
-                 (rest inputs)
-                 ;;  (next-grad)
-                 ;;  (inc idx)
-                 next-grad))))))
+          (let [curr-layer (first layers)
+                curr-act (first act)
+                curr-input (first inputs)
+                ;; layer-input (reverse-layer-iput act orig-input idx tot-layers)
+                next-grad (backpropagation-singular curr-layer curr-act curr-input grad learing-rate)]
+            ;; next-grad (backpropagation-singular curr-layer curr-act layer-input grad learing-rate)]
+
+            (recur (rest layers)
+                   (rest act)
+                   (rest inputs)
+                   ;;  (next-grad)
+                   ;;  (inc idx)
+                   next-grad)))))
+
+    (catch Exception e
+      (println "Exception backpropagation" (.getMessage e))
+      (throw e))))
 
 ;; Jedan korak u treniranju nn. 
 ;; Radi se forward pass, racunanje lossa (cross-entropije)
 ;; I na kraju se radi backpropagation
 (defn single-step [nn input class-idx learing-rate]
-  (println "Parameters single-step" nn input class-idx learing-rate)
+  (try
+    (println "Parameters single-step" nn input class-idx learing-rate)
 
-  (let [act (nn-forward input nn)
-        output (:y (last (:act act)))
-        prob (softmax! (cor/copy output))
-        ;; prob (softmax! (cor/copy! output))
-        loss (cross-entropy prob class-idx)]
-    (backpropagation nn act class-idx learing-rate)
+    (let [act (nn-forward input nn)
+          output (:y (last (:act act)))
+          prob (softmax! (cor/copy output))
+          ;; prob (softmax! (cor/copy! output))
+          loss (cross-entropy prob class-idx)]
+      (backpropagation nn act class-idx learing-rate)
 
-    ;; Za predvidjenu klasnu se uzima index maksimalne verovatnoce
-    {:loss loss :prob prob :pred-class (cor/imax prob)}))
+      ;; Za predvidjenu klasnu se uzima index maksimalne verovatnoce
+      {:loss loss :prob prob :pred-class (cor/imax prob)})
+    (catch Exception e
+      (println "Exception single-step" (.getMessage e))
+      (throw e))))
+
 
 
 ;; Treniranje vise parametara 
 ;; Treniranje vise parametara 
 (defn train-batch [nn inputs all-class-idx learning-rate]
-  (println "Parameters train-batch" nn inputs all-class-idx learning-rate)
-  (let [samples (cor/dim all-class-idx)
-        tot-loss (atom 0.0)
-        accurate-pred (atom 0)]
+  (try
+    (println "Parameters train-batch" nn inputs all-class-idx learning-rate)
+    (let [samples (cor/dim all-class-idx)
+          tot-loss (atom 0.0)
+          accurate-pred (atom 0)]
 
-    (dotimes [i samples]
-      (let [input (cor/row inputs i)
-            class (cor/entry all-class-idx i)
-            res (single-step nn input class learning-rate)
-            loss (:loss res)
-            pred (:pred-class res)]
+      (dotimes [i samples]
+        (let [input (cor/row inputs i)
+              class (cor/entry all-class-idx i)
+              res (single-step nn input class learning-rate)
+              loss (:loss res)
+              pred (:pred-class res)]
 
-        (swap! tot-loss + loss)
-        ;; Kada prediktuje dobro
-        (when (= pred class)
-          (swap! accurate-pred inc))))
+          (swap! tot-loss + loss)
+          ;; Kada prediktuje dobro
+          (when (= pred class)
+            (swap! accurate-pred inc))))
 
-    {:avg-loss (/ @tot-loss samples) :accuracy (/ @accurate-pred samples)}))
+      {:avg-loss (/ @tot-loss samples) :accuracy (/ @accurate-pred samples)})
+
+    (catch Exception e
+      (println "Exception train-batch" (.getMessage e))
+      (throw e))))
+
 
 
 (defn train-nn [nn inputs all-class-idx learing-rate epochs]
+  (try
 
-  (println "Parameters" nn inputs all-class-idx learing-rate epochs)
-  (dotimes [e epochs]
-    (let [stats (train-batch nn inputs all-class-idx learing-rate)]
+    (println "Parameters" nn inputs all-class-idx learing-rate epochs)
+    (dotimes [e epochs]
+      (let [stats (train-batch nn inputs all-class-idx learing-rate)]
 
-      (println "$Epoch" (inc e))
-      (println "$Avg loss" (:avg-loss stats))
-      (println "$Accuraccy" (* 100 (:accuracy stats)))))
+        (println "$Epoch" (inc e))
+        (println "$Avg loss" (:avg-loss stats))
+        (println "$Accuraccy" (* 100 (:accuracy stats)))))
 
-  nn)
+    nn
+    (catch Exception e
+      (println "Exception train-nn" (.getMessage e))
+      (throw e))))
+
+
 
 
 
@@ -278,7 +368,7 @@
 
 (def input (ntv/fv [1.1 2.2 3.3 4.4]))
 
-(println "Testing single layer fn" (single-step nn input 1 0.1))
+;; (println "Testing single layer fn" (single-step nn input 1 0.1))
 
 (def train-data (ntv/fge 4 4  [1.0 0.0 1.0 0.0
                                2.0 1.0 2.0 1.0
@@ -288,7 +378,7 @@
 
 (def classes (ntv/iv 1 2 3))
 
-;; (println "Testing nn traingin" (train-nn nn train-data classes 0.1 100))
+(println "Testing nn traingin" (train-nn nn train-data classes 0.1 100))
 
 ;; (def training-test (train-nn nn train-data classes 0.1 50))
 
