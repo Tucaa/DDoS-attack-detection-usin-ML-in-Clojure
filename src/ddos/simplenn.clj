@@ -2,11 +2,13 @@
   ;; Kasnije refraktorisi sa :refer all
   (:require [uncomplicate.neanderthal.core :as cor]
             [uncomplicate.neanderthal.native :as ntv]
-            [uncomplicate.neanderthal.random :refer [rand-uniform!]]
+            [uncomplicate.neanderthal.random :refer [rand-uniform! rand-normal!]]
             [uncomplicate.neanderthal.vect-math :as v]
-            [uncomplicate.neanderthal.math :as m]))
+            [uncomplicate.neanderthal.math :as m]
+            [ddos.importexport :refer :all]))
+  
 
-
+;; ____________________FUNKCIJE_____________________
 ;; Kasnije optimizovati
 (defn sigmoid! [n]
   (try
@@ -17,7 +19,8 @@
 
     n
     (catch Exception e
-      (println "Exception sigmoid!" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception sigmoid!" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
@@ -31,7 +34,37 @@
     ;; (cor/entry! n i (* j (- 1 j))))))
     n
     (catch Exception e
-      (println "Exception sigmoid-der!" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception sigmoid-der!" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+
+(defn relu! [n]
+  (try
+    (let [vec-size (cor/dim n)]
+      (dotimes [i vec-size]
+        (let [j (cor/entry n i)]
+          (cor/entry! n i (max 0.0 j))))
+      n)
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception relu!" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+
+
+;; relu(x) = 1 ako x > 0 u suprotnom 0
+(defn relu-der! [n]
+  (try
+    (let [vec-size (cor/dim n)]
+      (dotimes [i vec-size]
+        (let [j (cor/entry n i)]
+          (cor/entry! n i (if (> j 0.0) 1.0 0.0))))
+      n)
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception relu-der!" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 (defn create-layer [input-size output-size activation-fn]
@@ -52,21 +85,36 @@
        ;;  Elegantnije uradi
        :activation activation-fn})
     (catch Exception e
-      (println "Exception create-layer" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception create-layer" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
+
+
+;; He inicilajizacija koja se koristi kod relu aktivacione funkcije za sprecavanje nestajucih ili eksplozivnih gradijenata
+;; Wraper create layer f-je
+(defn create-layer-he [input-size output-size activation-fn]
+  (let [layer (create-layer input-size output-size activation-fn)
+        std (Math/sqrt (/ 2.0 input-size))]
+    (rand-normal! 0.0 std (:weights layer))
+    (cor/scal! 0.0 (:bias layer))
+    layer))
 
 (defn forward [layer input]
   ;; Uradi test za validaciju
   ;;  Za linearnu funkciju formula x = weight * input + bias | Nelinearna je fja aktivacije na linearni deo = y activation(x)
   (try
-    (let [{:keys [weights bias activation]} layer
+    ;; Dodat je uslov za linearnost kod poslednjeg sloja 
+    (let [{:keys [weights bias activation linear?]} layer
           linear (cor/mv weights input)
           x (cor/axpy! 1.0 bias linear)
           ;; x (cor/axpy! 1.0 bias (cor/mv weights input))
-          y (activation x)]
+          y (if linear? x (activation x))]
       {:x x :y y})
     (catch Exception e
-      (println "Exception forward" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception forward" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 (defn nn-forward [input network]
@@ -85,7 +133,9 @@
            network)]
       final)
     (catch Exception e
-      (println "Exception nn-forward" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception nn-forward" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
@@ -101,7 +151,8 @@
           final-vec (cor/entry vec class-idx)]
       (- sum-exp final-vec))
     (catch Exception e
-      (println "Exception cross-entropy" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception cross-entropy" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
@@ -115,7 +166,9 @@
                                   (cor/entry all-class-idx i)))]
       (/ (reduce + 0.0 losses) batch-size))
     (catch Exception e
-      (println "Exception cross-entropy-batch" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception cross-entropy-batch" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
@@ -135,7 +188,9 @@
 
       v)
     (catch Exception e
-      (println "Exception softmax!" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception softmax!" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
@@ -149,7 +204,9 @@
 
       grad)
     (catch Exception e
-      (println "Exception init-gradient" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception init-gradient" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
@@ -161,7 +218,9 @@
       input
       (:y (nth (reverse (:act act)) (inc layer-idx))))
     (catch Exception e
-      (println "Exception reverse-layer-input" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception reverse-layer-input" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 ;; Dodaj test za proveru argumenata kasnije !
 
@@ -169,8 +228,8 @@
 
 ;; Fja za racunanje gradijenta sloja
 (defn layer-gradients [grad curr-ac layer-input]
-  (try
-    (let [act-der (sigmoid-der! (cor/copy (:y curr-ac)))
+  (try 
+    (let [act-der (relu-der! (cor/copy (:y curr-ac)))
           ;; (let [act-der (sigmoid-der! (cor/copy (:y curr-ac)))
           grad-x (v/mul! grad act-der)
           ;; grad-x (cor/emul! grad act-der)
@@ -178,7 +237,9 @@
           ;; Spoljni proizvod!
           n (cor/dim grad-x)
           m (cor/dim layer-input)
-          grad-weight (ntv/dge n m)]
+          ;; Vidi da unapred definises da li ce se koristiti double ili float (moze i neki test)
+          ;;grad-weight (ntv/dge n m)
+          grad-weight (ntv/fge n m)]
       (doseq [i (range n)
               j (range m)]
 
@@ -200,19 +261,26 @@
       {:grad-x grad-x :grad-weight grad-weight :grad-bias (cor/copy grad-x)})
 
     (catch Exception e
-      (println "Exception layer-gradients" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception layer-gradients" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
 ;; Updejtovanje parametra layera
 (defn update-layer! [layer grads learning-rate]
   (try
+    (println "weight-dims:" (cor/mrows (:weights layer)) "x" (cor/ncols (:weights layer)))
+    (println "grad-weight dims:" (cor/mrows (:grad-weight grads)) "x" (cor/ncols (:grad-weight grads)))
+    (println "bias dim:" (cor/dim (:bias layer)))
     (cor/axpy! (- learning-rate) (:grad-weight grads) (:weights layer))
     (cor/axpy! (- learning-rate) (:grad-bias grads) (:bias layer))
     layer
 
     (catch Exception e
-      (println "Exception update-layer" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception update-layer" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
@@ -222,7 +290,9 @@
   (try
     (cor/mv (cor/trans (:weights layer)) grad-x)
     (catch Exception e
-      (println "Exception propagate-backwards" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception propagate-backwards" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 ;; Funkcija za backpropagaciju jednog sloja
@@ -235,20 +305,22 @@
 
 
     (catch Exception e
-      (println "Exception backpropagation-singular" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception backpropagation-singular" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
 ;; Backpropagacija cele mreze
-(defn backpropagation [nn act class-idx learing-rate]
+(defn backpropagation [nn act orig-input class-idx learing-rate]
   (try
 
     (let [last-act (last (:act act))
           output (:y last-act)
-          orig-input (:curr act)
+          ;;orig-input (:curr act)
           init-grad (init-gradient output class-idx)
           reversed-nn (reverse nn)
-          ;; Vraca sve sem poslednjeg 
+          ;; Vraca sve sem poslednjeg  layer-inputs (reverse (cons orig-input (map :y (butlast (:act act)))))
           layer-inputs (reverse (cons orig-input (map :y (butlast (:act act)))))
           reversed-act (reverse (:act act))]
       ;; reversed-act (reverse (:act act))
@@ -280,7 +352,9 @@
                    next-grad)))))
 
     (catch Exception e
-      (println "Exception backpropagation" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception backpropagation" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 ;; Jedan korak u treniranju nn. 
@@ -294,13 +368,17 @@
           output (:y (last (:act act)))
           prob (softmax! (cor/copy output))
           ;; prob (softmax! (cor/copy! output))
-          loss (cross-entropy prob class-idx)]
-      (backpropagation nn act class-idx learing-rate)
+          loss (cross-entropy output class-idx)]
+          ;;loss (cross-entropy prob class-idx)
+          
+      (backpropagation nn act input class-idx learing-rate)
 
       ;; Za predvidjenu klasnu se uzima index maksimalne verovatnoce
       {:loss loss :prob prob :pred-class (cor/imax prob)})
     (catch Exception e
-      (println "Exception single-step" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception single-step" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
@@ -329,7 +407,9 @@
       {:avg-loss (/ @tot-loss samples) :accuracy (/ @accurate-pred samples)})
 
     (catch Exception e
-      (println "Exception train-batch" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception train-batch" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
 
@@ -347,8 +427,39 @@
 
     nn
     (catch Exception e
-      (println "Exception train-nn" (.getMessage e))
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception train-nn" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
+
+
+(defn normalize-data [data])
+(defn prepare-data [file])
+
+
+
+;; ___________________TRENIRANJE MREZE___________________________
+
+(def features
+  ["top-dst-port-share" "src-ip-entropy" "udp-ratio" "dst-ip-entropy"
+   "dns-query-ratio" "unique-dst-ips" "unique-src-ips" "tcp-syn-ratio"
+   "top-src-ip-packet-share" "tcp-fin-ratio" "packet-rate" "tcp-ratio"
+   "unique-flows" "std-packet-size" "icmp-ratio" "dst-subnet-spread"
+   "byte-rate" "avg-packet-size" "tcp-ack-ratio" "dns-response-ratio"
+   "top-src-ip-byte-share" "dst-port-entropy"])
+
+(def labels
+   {":ack-flood" 0
+   ":icmp-flood" 1
+   ":ntp-amplification" 2
+   ":udp-flood-large" 3
+   ":udp-flood-mixed" 4
+   "dns-amplification" 5
+   "normal" 6
+   "subnet-carpet-bombing" 7
+   "syn-flood" 8}))
+
+
 
 
 
@@ -362,22 +473,39 @@
 ;;         output (cor/copy! b (ntv/fv (:output-size layer)))]
 ;;     (cor/mv! w input output)))
 
-(def nn [(create-layer 4 8 sigmoid!)
-         (create-layer 8 6 sigmoid!)
-         (create-layer 6 2 sigmoid!)])
+(def nn [(create-layer 4 8 relu!)
+         (create-layer 8 6 relu!)
+         (assoc (create-layer 6 9 nil) :linear? true)])
+
+;; (def nn [(create-layer 4 8 sigmoid!)
+;;          (create-layer 8 6 sigmoid!)
+;;          (create-layer 6 2 sigmoid!)])
 
 (def input (ntv/fv [1.1 2.2 3.3 4.4]))
 
 ;; (println "Testing single layer fn" (single-step nn input 1 0.1))
 
-(def train-data (ntv/fge 4 4  [1.0 0.0 1.0 0.0
-                               2.0 1.0 2.0 1.0
-                               3.0 2.0 1.0 0.0
-                               0.0 1.0 2.0 3.0]))
+(def train-data (ntv/fge 9 4 [1.0 0.0 1.0 0.0
+                              2.0 1.0 2.0 1.0
+                              3.0 2.0 1.0 0.0
+                              0.0 1.0 2.0 3.0
+                              1.5 0.5 1.5 0.5
+                              2.5 1.5 0.5 1.0
+                              0.5 2.0 3.0 1.0
+                              3.0 3.0 0.0 1.0
+                              1.0 2.0 0.0 3.0]))
+
+;; (def train-data (ntv/fge 4 4  [1.0 0.0 1.0 0.0
+;;                                2.0 1.0 2.0 1.0
+;;                                3.0 2.0 1.0 0.0
+;;                                0.0 1.0 2.0 3.0]))
 
 
-(def classes (ntv/iv 1 2 3))
+(def classes (ntv/iv 0 1 2 3 4 5 6 7 8))
 
+
+;; (def classes (ntv/iv 1 2 3 4))
+;; 
 (println "Testing nn traingin" (train-nn nn train-data classes 0.1 100))
 
 ;; (def training-test (train-nn nn train-data classes 0.1 50))

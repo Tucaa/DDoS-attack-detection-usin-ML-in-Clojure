@@ -4,28 +4,29 @@
             ;; [incanter.io :as inc-io]
             [incanter.stats :as s]
             [clojure.data.csv :as csv]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [ddos.importexport :refer :all]))
 
 
-(defn parse-value [s]
-  (cond
-    (nil? s) nil
-    (= s "true") true
-    (= s "false") false
-    :else (try (Double/parseDouble s)
-               (catch Exception _ s))))
-
-(defn load-csv [filepath]
-  (with-open [reader (io/reader filepath)]
-    ;; Loaduje se celokupni csv u memoriju
-    (let [data (doall (csv/read-csv reader))
-          headers (map keyword (first data))
-          rows (rest data)]
-      (i/dataset headers
-                 (map (fn [row] (map parse-value row)) rows)))))
-
-(defn save-graph [graph filename]
-  (i/save graph filename :width 800 :height 600))
+;; (defn parse-value [s]
+;;   (cond
+;;     (nil? s) nil
+;;     (= s "true") true
+;;     (= s "false") false
+;;     :else (try (Double/parseDouble s)
+;;                (catch Exception _ s))))
+;; 
+;; (defn load-csv [filepath]
+;;   (with-open [reader (io/reader filepath)]
+;;     ;; Loaduje se celokupni csv u memoriju
+;;     (let [data (doall (csv/read-csv reader))
+;;           headers (map keyword (first data))
+;;           rows (rest data)]
+;;       (i/dataset headers
+;;                  (map (fn [row] (map parse-value row)) rows)))))
+;; 
+;; (defn save-graph [graph filename]
+;;   (i/save graph filename :width 800 :height 600))
 
 (defn graph-class-distribution [dataset]
   (let [labels (i/$ :label dataset)

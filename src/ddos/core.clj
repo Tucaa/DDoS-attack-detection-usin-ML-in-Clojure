@@ -2,7 +2,7 @@
   (:require [ddos.attacks :as attacks]
             [ddos.normal :as normal]
             [ddos.windowing :as w]
-            [ddos.export :as export])
+            [ddos.importexport :as ie])
   (:gen-class))
 
 
@@ -152,4 +152,4 @@
     ;;  (generate-complete-dataset window-ms))]
     ;;  (generate-complete-dataset window-ms))]
     (println data)
-    (export/write-csv data "new_ddos_dataset.csv")))
+    (ie/write-csv data "new_ddos_dataset.csv")))
