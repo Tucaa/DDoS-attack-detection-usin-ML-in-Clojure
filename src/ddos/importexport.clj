@@ -17,15 +17,24 @@
     :else (try (Double/parseDouble s)
                (catch Exception _ s))))
 
+(defn load-csv [file-path]
+  (try
+    (with-open [reader (io/reader file-path)]
+      ;; Doall za loadovanje cele sekvence u memoriju
+      (doall (csv/read-csv reader)))
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception load-csv" (.getMessage e) "Line:" (.getLineNumber ste))
+        (throw e)))))
 
-(defn load-csv [filepath]
-  (with-open [reader (io/reader filepath)]
-    ;; Loaduje se celokupni csv u memoriju
-    (let [data (doall (csv/read-csv reader))
-          headers (map keyword (first data))
-          rows (rest data)]
-      (i/dataset headers
-                 (map (fn [row] (map parse-value row)) rows)))))
+;; (defn load-csv [filepath]
+;;   (with-open [reader (io/reader filepath)]
+;;     ;; Loaduje se celokupni csv u memoriju
+;;     (let [data (doall (csv/read-csv reader))
+;;           headers (map keyword (first data))
+;;           rows (rest data)]
+;;       (i/dataset headers
+;;                  (map (fn [row] (map parse-value row)) rows)))))
 
-(defn save-graph [graph filename]
-  (i/save graph filename :width 800 :height 600))
+;; (defn save-graph [graph filename]
+;;   (i/save graph filename :width 800 :height 600))

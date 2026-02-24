@@ -433,7 +433,29 @@
       (throw e))))
 
 
-(defn normalize-data [data])
+(defn normalize-data [data]
+  ;; Max-min normalizacija po kolonama
+  (let [data-features (count (first data))
+        max-vals (vec (for [i (range data-features)]
+                        (apply max (map #(nth % i) data))))
+        min-vals (vec (for [i (range data-features)]
+                        (apply min (map #(nth % i) data))))
+        normalized
+        (mapv (fn [row]
+                (mapv (fn [i]
+                        (let [mx (nth max-vals i)
+                              mn (nth min-vals i)
+                              diff (- mx mn)]
+                          (if (< (Math/abs diff) 1e-8)
+                            0.0
+                            (/ (- (nth row i) mn) diff))))
+                      (range data-features)))
+              data)]
+    {:normalized normalized
+     :max max-vals
+     :min min-vals}))
+    
+
 (defn prepare-data [file])
 
 
@@ -457,11 +479,7 @@
    "dns-amplification" 5
    "normal" 6
    "subnet-carpet-bombing" 7
-   "syn-flood" 8}))
-
-
-
-
+   "syn-flood" 8})
 
 
 
@@ -495,6 +513,9 @@
                               3.0 3.0 0.0 1.0
                               1.0 2.0 0.0 3.0]))
 
+
+(println "Test normalize data" normalize-data train-data)
+
 ;; (def train-data (ntv/fge 4 4  [1.0 0.0 1.0 0.0
 ;;                                2.0 1.0 2.0 1.0
 ;;                                3.0 2.0 1.0 0.0
@@ -506,8 +527,8 @@
 
 ;; (def classes (ntv/iv 1 2 3 4))
 ;; 
-(println "Testing nn traingin" (train-nn nn train-data classes 0.1 100))
-
+;; (println "Testing nn traingin" (train-nn nn train-data classes 0.1 100))
+;; 
 ;; (def training-test (train-nn nn train-data classes 0.1 50))
 
 
