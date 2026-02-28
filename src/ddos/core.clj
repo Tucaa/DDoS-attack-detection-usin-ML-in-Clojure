@@ -121,7 +121,7 @@
                                     :attack-type :subnet-carpet-bombing}])
 
         balanced-samples (mapcat
-                          (fn [attack-type attack-fn] 
+                          (fn [attack-type attack-fn]
                             (map-indexed (fn [idx sample]
                                            (assoc sample
                                                   :label attack-type
@@ -129,8 +129,8 @@
                                                   :timestamp start-ts
                                                   :attack-active (< (rand) 0.15)))
                                          (repeatedly 100 attack-fn)))
-                          [:udp-flood-large :icmp-flood :udp-flood-mixed
-                           :ntp-amplification :ack-flood]
+                          ["udp-flood-large" "icmp-flood" "udp-flood-mixed"
+                           "ntp-amplification" "ack-flood"]
                           [attacks/udp-large-packets attacks/icmp-flood
                            attacks/udp-flood-mixed attacks/ntp-amplification
                            attacks/ack-flood])

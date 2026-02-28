@@ -6,7 +6,7 @@
             [uncomplicate.neanderthal.vect-math :as v]
             [uncomplicate.neanderthal.math :as m]
             [ddos.importexport :refer :all]))
-  
+
 
 ;; ____________________FUNKCIJE_____________________
 ;; Kasnije optimizovati
@@ -39,6 +39,24 @@
         (println "Exception sigmoid-der!" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
+
+;; Ovo je fja za enkodiranje timestampa u ciklicnu repezentaciju vrenma
+;; Pomocu sinusa i kosinus, ovo je najjednostavniji pristup!
+(defn cyclic-timestamp [timestamp]
+  (try
+    (let [seconds (mod timestamp 86400)
+          angle (* 2 Math/PI (/ seconds 86400))]
+      [(Math/sin angle) (Math/cos angle)])
+
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception cyclic-timestamp!" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+(defn parse-feature [col-name value]
+  (if (= col-name "attack-active")
+    (if (= value "true") 1.0 0.0)
+    (Double/parseDouble value)))
 
 (defn relu! [n]
   (try
@@ -228,7 +246,7 @@
 
 ;; Fja za racunanje gradijenta sloja
 (defn layer-gradients [grad curr-ac layer-input]
-  (try 
+  (try
     (let [act-der (relu-der! (cor/copy (:y curr-ac)))
           ;; (let [act-der (sigmoid-der! (cor/copy (:y curr-ac)))
           grad-x (v/mul! grad act-der)
@@ -369,8 +387,8 @@
           prob (softmax! (cor/copy output))
           ;; prob (softmax! (cor/copy! output))
           loss (cross-entropy output class-idx)]
-          ;;loss (cross-entropy prob class-idx)
-          
+      ;;loss (cross-entropy prob class-idx)
+
       (backpropagation nn act input class-idx learing-rate)
 
       ;; Za predvidjenu klasnu se uzima index maksimalne verovatnoce
@@ -434,29 +452,95 @@
 
 
 (defn normalize-data [data]
-  ;; Max-min normalizacija po kolonama
-  (let [data-features (count (first data))
-        max-vals (vec (for [i (range data-features)]
-                        (apply max (map #(nth % i) data))))
-        min-vals (vec (for [i (range data-features)]
-                        (apply min (map #(nth % i) data))))
-        normalized
-        (mapv (fn [row]
-                (mapv (fn [i]
-                        (let [mx (nth max-vals i)
-                              mn (nth min-vals i)
-                              diff (- mx mn)]
-                          (if (< (Math/abs diff) 1e-8)
-                            0.0
-                            (/ (- (nth row i) mn) diff))))
-                      (range data-features)))
-              data)]
-    {:normalized normalized
-     :max max-vals
-     :min min-vals}))
-    
+  (try
+    ;; Max-min normalizacija po kolonama
 
-(defn prepare-data [file])
+    (let [data-features (count (first data))
+          max-vals (vec (for [i (range data-features)]
+                          (apply max (map #(nth % i) data))))
+          min-vals (vec (for [i (range data-features)]
+                          (apply min (map #(nth % i) data))))
+          normalized
+          (mapv (fn [row]
+                  (mapv (fn [i]
+                          (let [mx (nth max-vals i)
+                                mn (nth min-vals i)
+                                diff (- mx mn)]
+                            (if (< (Math/abs diff) 1e-8)
+                              0.0
+                              (/ (- (nth row i) mn) diff))))
+                        (range data-features)))
+                data)]
+      {:normalized normalized
+       :max max-vals
+       :min min-vals})
+
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception normalize-data" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+
+(defn prepare-data [file features input-labels]
+  (try
+    (let [raw-data (load-csv file)
+          header (:header raw-data)
+          data (:data raw-data)
+          col-map (zipmap header (range))
+          label-idx (get col-map "label")
+          timestamp-idx (get col-map "timestamp")
+          other-feat-idx (mapv (fn [name] (get col-map name)) features)
+
+          processed-data
+          (vec (for [row data]
+                 (let [base-features (mapv (fn [idx] (nth row idx)) other-feat-idx)
+                       parsed-base (mapv (fn [name val]
+                                           (parse-feature name val))
+                                         features
+                                         base-features)
+                       ts-raw (nth row timestamp-idx)
+                       timestamp (Double/parseDouble ts-raw)
+                       time-encoded (cyclic-timestamp timestamp)
+                       sin-t (first time-encoded)
+                       cos-t (second time-encoded)]
+                   (conj parsed-base sin-t cos-t))))
+
+          labels
+          (vec (for [row data]
+                 (let [label-val (nth row label-idx)
+                       idx (get input-labels label-val)]
+                   (when (nil? idx)
+                     (println "Unknown class:" label-val))
+                   (or idx -1))))
+
+          norm-res (normalize-data processed-data)
+          normalized-data (:normalized norm-res)
+
+          n-samples (count normalized-data)
+          n-features (count (first normalized-data))
+          all-values (float-array (flatten normalized-data))
+          feature-matrix (ntv/fge n-features n-samples all-values)
+          ;; all-values (flatten normalized-data)
+          ;; feature-matrix (ntv/fge n-features n-samples all-values)
+          final-matrix (cor/trans feature-matrix)
+          label-vector (let [n (count labels)
+                             lv (ntv/iv n)]
+                         (dotimes [i n]
+                           (cor/entry! lv i (nth labels i)))
+                         lv)
+          ;; label-vector (ntv/iv (count labels) (int-array labels))
+          ;; ;;label-vector (apply ntv/iv labels)
+          ;; label-vector (ntv/iv (int-array labels)) 
+          ]
+
+      {:features final-matrix
+       :labels label-vector
+       :n-samples n-samples
+       :n-features n-features})
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception prepare-data" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
 
 
 
@@ -471,11 +555,11 @@
    "top-src-ip-byte-share" "dst-port-entropy"])
 
 (def labels
-   {":ack-flood" 0
-   ":icmp-flood" 1
-   ":ntp-amplification" 2
-   ":udp-flood-large" 3
-   ":udp-flood-mixed" 4
+  {"ack-flood" 0
+   "icmp-flood" 1
+   "ntp-amplification" 2
+   "udp-flood-large" 3
+   "udp-flood-mixed" 4
    "dns-amplification" 5
    "normal" 6
    "subnet-carpet-bombing" 7
@@ -491,9 +575,14 @@
 ;;         output (cor/copy! b (ntv/fv (:output-size layer)))]
 ;;     (cor/mv! w input output)))
 
-(def nn [(create-layer 4 8 relu!)
-         (create-layer 8 6 relu!)
-         (assoc (create-layer 6 9 nil) :linear? true)])
+
+(def nn [(create-layer-he 25 64 relu!)
+         (create-layer-he 64 32 relu!)
+         (assoc (create-layer-he 32 9 nil) :linear? true)])
+
+;; (def nn [(create-layer 4 8 relu!)
+;;          (create-layer 8 6 relu!)
+;;          (assoc (create-layer 6 9 nil) :linear? true)])
 
 ;; (def nn [(create-layer 4 8 sigmoid!)
 ;;          (create-layer 8 6 sigmoid!)
@@ -515,7 +604,12 @@
 
 
 (println "Test normalize data" normalize-data train-data)
-
+;; (println "Work dir" (System/getProperty "user.dir"))
+;; 
+(let [result (prepare-data "new_ddos_dataset.csv" features labels)]
+  (println "Num rows:" (:n-samples result))
+  (println "Num features:" (:n-features result))
+  (println "Labels:" (take 3 (:labels result))))
 ;; (def train-data (ntv/fge 4 4  [1.0 0.0 1.0 0.0
 ;;                                2.0 1.0 2.0 1.0
 ;;                                3.0 2.0 1.0 0.0

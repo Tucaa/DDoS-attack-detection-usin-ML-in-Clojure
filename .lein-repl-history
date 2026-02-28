@@ -385,3 +385,6 @@ q
 (require '[ddos.simplenn  :reload true])
 (require '[ddos.simplenn  :reload true])\
 (require '[ddos.simplenn  :reload true])
+(require '[ddos.core  :reload true])
+lein run
+(require '[ddos.simplenn  :reload true])

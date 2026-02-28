@@ -1,6 +1,6 @@
 (ns ddos.importexport
-    (:require [clojure.data.csv :as csv]
-             [clojure.java.io :as io]))
+  (:require [clojure.data.csv :as csv]
+            [clojure.java.io :as io]))
 
 (defn write-csv [rows path]
   (let [headers (-> rows first keys)]
@@ -20,13 +20,17 @@
 (defn load-csv [file-path]
   (try
     (with-open [reader (io/reader file-path)]
-      ;; Doall za loadovanje cele sekvence u memoriju
-      (doall (csv/read-csv reader)))
+      (let [rows (doall (csv/read-csv reader))
+            header (first rows)
+            data (vec (rest rows))]
+        (println "Num rows:" (count rows))
+        (println "Header:" header)
+        {:header header
+         :data data}))
     (catch Exception e
       (let [ste (first (.getStackTrace e))]
         (println "Exception load-csv" (.getMessage e) "Line:" (.getLineNumber ste))
         (throw e)))))
-
 ;; (defn load-csv [filepath]
 ;;   (with-open [reader (io/reader filepath)]
 ;;     ;; Loaduje se celokupni csv u memoriju
