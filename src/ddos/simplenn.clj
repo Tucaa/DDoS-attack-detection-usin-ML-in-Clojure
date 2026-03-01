@@ -258,11 +258,15 @@
           ;; Vidi da unapred definises da li ce se koristiti double ili float (moze i neki test)
           ;;grad-weight (ntv/dge n m)
           grad-weight (ntv/fge n m)]
-      (doseq [i (range n)
-              j (range m)]
-
-        (cor/entry! grad-weight i j (* (cor/entry grad-x i)
-                                       (cor/entry layer-input j))))
+      ;Spoljni proizvod sa doseq je jako sporo radilo!
+      (cor/rk! 1.0 grad-x layer-input grad-weight)
+      ;; (cor/ger! 1.0 grad-x layer-input grad-weight)
+      ;; 
+      ;; (doseq [i (range n)
+      ;;         j (range m)]
+      ;; 
+      ;;   (cor/entry! grad-weight i j (* (cor/entry grad-x i)
+      ;;                                  (cor/entry layer-input j))))
       ;; grad-x-col (ntv/dge n 1)
       ;; _ (cor/copy! grad-x-col grad-x)
       ;; layer-input-row (ntv/dge 1 m)
@@ -527,11 +531,11 @@
                              lv (ntv/iv n)]
                          (dotimes [i n]
                            (cor/entry! lv i (nth labels i)))
-                         lv)
-          ;; label-vector (ntv/iv (count labels) (int-array labels))
-          ;; ;;label-vector (apply ntv/iv labels)
-          ;; label-vector (ntv/iv (int-array labels)) 
-          ]
+                         lv)]
+      ;; label-vector (ntv/iv (count labels) (int-array labels))
+      ;; ;;label-vector (apply ntv/iv labels)
+      ;; label-vector (ntv/iv (int-array labels)) 
+
 
       {:features final-matrix
        :labels label-vector
@@ -543,6 +547,27 @@
       (throw e))))
 
 
+(defn predict [nn input]
+  (let [act (nn-forward input nn)
+        output (:y (last (:act act)))
+        prob (softmax! (cor/copy output))]
+    (cor/imax prob)))
+
+
+(defn evaluate [nn features labels]
+  (let [samples (cor/dim labels)]
+
+    (dotimes [i samples]
+      (let [input (cor/row features i)
+            actual (int (cor/entry labels i))
+            pred (predict nn input)]
+
+        ;; Kasnije dodaj confusion matricu i ostlau metriku tancosti modela (precision recall)
+        (println "Sample" i
+                 "| Actual class:" actual
+                 "| Prediction:" pred
+                 "| True:" (= pred actual))))))
+
 
 ;; ___________________TRENIRANJE MREZE___________________________
 
@@ -552,7 +577,7 @@
    "top-src-ip-packet-share" "tcp-fin-ratio" "packet-rate" "tcp-ratio"
    "unique-flows" "std-packet-size" "icmp-ratio" "dst-subnet-spread"
    "byte-rate" "avg-packet-size" "tcp-ack-ratio" "dns-response-ratio"
-   "top-src-ip-byte-share" "dst-port-entropy"])
+   "top-src-ip-byte-share" "dst-port-entropy" "attack-active"])
 
 (def labels
   {"ack-flood" 0
@@ -606,10 +631,33 @@
 (println "Test normalize data" normalize-data train-data)
 ;; (println "Work dir" (System/getProperty "user.dir"))
 ;; 
-(let [result (prepare-data "new_ddos_dataset.csv" features labels)]
-  (println "Num rows:" (:n-samples result))
-  (println "Num features:" (:n-features result))
-  (println "Labels:" (take 3 (:labels result))))
+
+(def dataset (prepare-data "new_ddos_dataset.csv" features labels))
+(def train-features (:features dataset))
+(def train-labels (:labels dataset))
+
+(def trained-nn (train-nn nn train-features train-labels 0.01 10))
+
+(evaluate trained-nn train-features train-labels)
+;; (let [result1 (prepare-data "new_ddos_dataset.csv" features labels)]
+;;   (evaluate nn (:features result1) (:labels result1)))
+
+
+
+;; (let [result (prepare-data "new_ddos_dataset.csv" features labels)
+;;       train-features (:features result)
+;;       train-labels (:labels result)
+;;       nn [(create-layer-he 25 64 relu!)
+;;           (create-layer-he 64 32 relu!)
+;;           (assoc (create-layer-he 32 9 nil) :linear? true)]]
+;;   (train-nn nn train-features train-labels 0.01 10))
+
+;; (let [result (prepare-data "new_ddos_dataset.csv" features labels)]
+;;   (println "Num rows:" (:n-samples result))
+;;   (println "Num features:" (:n-features result))
+;;   (println "Labels:" (take 5000 (:labels result)))
+;;   
+;;   )
 ;; (def train-data (ntv/fge 4 4  [1.0 0.0 1.0 0.0
 ;;                                2.0 1.0 2.0 1.0
 ;;                                3.0 2.0 1.0 0.0
