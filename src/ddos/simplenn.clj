@@ -8,7 +8,14 @@
             [ddos.importexport :refer :all]))
 
 
-;; ____________________FUNKCIJE_____________________
+;;Morao sam ovde da deklarisem da ne bih menjao redosled fja
+;; A samim tim i logicku strukturu koda 
+(declare confusion-matrix-fn)
+(declare print-class-metrics)
+(declare labels)
+(declare features)
+
+;; ____________________AKTIVACIONE I OSTALE MATEMATICKE FJE_____________________
 ;; Kasnije optimizovati
 (defn sigmoid! [n]
   (try
@@ -40,23 +47,6 @@
       (throw e))))
 
 
-;; Ovo je fja za enkodiranje timestampa u ciklicnu repezentaciju vrenma
-;; Pomocu sinusa i kosinus, ovo je najjednostavniji pristup!
-(defn cyclic-timestamp [timestamp]
-  (try
-    (let [seconds (mod timestamp 86400)
-          angle (* 2 Math/PI (/ seconds 86400))]
-      [(Math/sin angle) (Math/cos angle)])
-
-    (catch Exception e
-      (let [ste (first (.getStackTrace e))]
-        (println "Exception cyclic-timestamp!" (.getMessage e) "Line:" (.getLineNumber ste)))
-      (throw e))))
-
-(defn parse-feature [col-name value]
-  (if (= col-name "attack-active")
-    (if (= value "true") 1.0 0.0)
-    (Double/parseDouble value)))
 
 (defn relu! [n]
   (try
@@ -84,6 +74,86 @@
       (let [ste (first (.getStackTrace e))]
         (println "Exception relu-der!" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
+
+
+;;  Kros entropija za jedan vektor
+(defn cross-entropy [vec class-idx]
+  (try
+    (let [max-val (cor/amax vec)
+          shifted (doto (cor/copy vec)
+                    (#(dotimes [i (cor/dim %)]
+                        (cor/entry! % i (- (cor/entry % i) max-val)))))
+          ;; shifted (cor/axpy! -1 max-val (cor/copy vec))
+          sum-exp (+ max-val (m/log (cor/sum (v/exp! shifted))))
+          final-vec (cor/entry vec class-idx)]
+      (- sum-exp final-vec))
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception cross-entropy" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+
+
+;;  Kros entropija za ceo batch
+(defn cross-entropy-batch [vec all-class-idx]
+  (try
+    (let [batch-size (cor/mrows vec)
+          losses (for [i (range batch-size)]
+                   (cross-entropy (cor/row vec i)
+                                  (cor/entry all-class-idx i)))]
+      (/ (reduce + 0.0 losses) batch-size))
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception cross-entropy-batch" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+
+
+;; Normalizacija vektora u raspodelu verovatnoce
+(defn softmax! [v]
+  (try
+    (let [m (cor/amax v)
+          n (cor/dim v)]
+      ;; v = v - m
+      (dotimes [i n]
+        (let [x (cor/entry v i)]
+          (cor/entry! v i (- x m))))
+      (v/exp! v)
+      (let [s (cor/sum v)]
+        (cor/scal! (/ 1.0 s) v))
+
+      v)
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+
+        (println "Exception softmax!" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+
+;; ________________POMOCNE FJE___________
+;; Ovo je fja za enkodiranje timestampa u ciklicnu repezentaciju vrenma
+;; Pomocu sinusa i kosinus, ovo je najjednostavniji pristup!
+(defn cyclic-timestamp [timestamp]
+  (try
+    (let [seconds (mod timestamp 86400)
+          angle (* 2 Math/PI (/ seconds 86400))]
+      [(Math/sin angle) (Math/cos angle)])
+
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception cyclic-timestamp!" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+(defn parse-feature [col-name value]
+  (if (= col-name "attack-active")
+    (if (= value "true") 1.0 0.0)
+    (Double/parseDouble value)))
+
+
+
+;_____________________DEFINISANJE MREZE (FJE)______________________
+
 
 (defn create-layer [input-size output-size activation-fn]
   ;; Moraces da napises testove koji ce proveravati da li unos validan
@@ -155,62 +225,6 @@
 
         (println "Exception nn-forward" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
-
-
-;;  Kros entropija za jedan vektor
-(defn cross-entropy [vec class-idx]
-  (try
-    (let [max-val (cor/amax vec)
-          shifted (doto (cor/copy vec)
-                    (#(dotimes [i (cor/dim %)]
-                        (cor/entry! % i (- (cor/entry % i) max-val)))))
-          ;; shifted (cor/axpy! -1 max-val (cor/copy vec))
-          sum-exp (+ max-val (m/log (cor/sum (v/exp! shifted))))
-          final-vec (cor/entry vec class-idx)]
-      (- sum-exp final-vec))
-    (catch Exception e
-      (let [ste (first (.getStackTrace e))]
-        (println "Exception cross-entropy" (.getMessage e) "Line:" (.getLineNumber ste)))
-      (throw e))))
-
-
-
-;;  Kros entropija za ceo batch
-(defn cross-entropy-batch [vec all-class-idx]
-  (try
-    (let [batch-size (cor/mrows vec)
-          losses (for [i (range batch-size)]
-                   (cross-entropy (cor/row vec i)
-                                  (cor/entry all-class-idx i)))]
-      (/ (reduce + 0.0 losses) batch-size))
-    (catch Exception e
-      (let [ste (first (.getStackTrace e))]
-
-        (println "Exception cross-entropy-batch" (.getMessage e) "Line:" (.getLineNumber ste)))
-      (throw e))))
-
-
-
-;; Normalizacija vektora u raspodelu verovatnoce
-(defn softmax! [v]
-  (try
-    (let [m (cor/amax v)
-          n (cor/dim v)]
-      ;; v = v - m
-      (dotimes [i n]
-        (let [x (cor/entry v i)]
-          (cor/entry! v i (- x m))))
-      (v/exp! v)
-      (let [s (cor/sum v)]
-        (cor/scal! (/ 1.0 s) v))
-
-      v)
-    (catch Exception e
-      (let [ste (first (.getStackTrace e))]
-
-        (println "Exception softmax!" (.getMessage e) "Line:" (.getLineNumber ste)))
-      (throw e))))
-
 
 
 ;; Racunanje inicijalnog gradijenta (izlaznog sloja: softmax + cross-entropy)
@@ -292,9 +306,9 @@
 ;; Updejtovanje parametra layera
 (defn update-layer! [layer grads learning-rate]
   (try
-    (println "weight-dims:" (cor/mrows (:weights layer)) "x" (cor/ncols (:weights layer)))
-    (println "grad-weight dims:" (cor/mrows (:grad-weight grads)) "x" (cor/ncols (:grad-weight grads)))
-    (println "bias dim:" (cor/dim (:bias layer)))
+    ;;(println "weight-dims:" (cor/mrows (:weights layer)) "x" (cor/ncols (:weights layer)))
+    ;;(println "grad-weight dims:" (cor/mrows (:grad-weight grads)) "x" (cor/ncols (:grad-weight grads)))
+    ;;(println "bias dim:" (cor/dim (:bias layer)))
     (cor/axpy! (- learning-rate) (:grad-weight grads) (:weights layer))
     (cor/axpy! (- learning-rate) (:grad-bias grads) (:bias layer))
     layer
@@ -384,7 +398,7 @@
 ;; I na kraju se radi backpropagation
 (defn single-step [nn input class-idx learing-rate]
   (try
-    (println "Parameters single-step" nn input class-idx learing-rate)
+    ;;(println "Parameters single-step" nn input class-idx learing-rate)
 
     (let [act (nn-forward input nn)
           output (:y (last (:act act)))
@@ -409,7 +423,7 @@
 ;; Treniranje vise parametara 
 (defn train-batch [nn inputs all-class-idx learning-rate]
   (try
-    (println "Parameters train-batch" nn inputs all-class-idx learning-rate)
+    ;;(println "Parameters train-batch" nn inputs all-class-idx learning-rate)
     (let [samples (cor/dim all-class-idx)
           tot-loss (atom 0.0)
           accurate-pred (atom 0)]
@@ -435,24 +449,150 @@
       (throw e))))
 
 
-
-(defn train-nn [nn inputs all-class-idx learing-rate epochs]
+(defn train-nn [nn inputs all-class-idx learning-rate epochs metrics]
   (try
+    (println (format "Begining: %d epoch, %d samples"
+                     epochs (cor/dim all-class-idx)))
+    (println "________________________________________")
 
-    (println "Parameters" nn inputs all-class-idx learing-rate epochs)
     (dotimes [e epochs]
-      (let [stats (train-batch nn inputs all-class-idx learing-rate)]
+      (let [stats (train-batch nn inputs all-class-idx learning-rate)
+            loss  (:avg-loss stats)
+            acc   (* 100.0 (float (:accuracy stats)))]
 
-        (println "$Epoch" (inc e))
-        (println "$Avg loss" (:avg-loss stats))
-        (println "$Accuraccy" (* 100 (:accuracy stats)))))
+        ;; Za loadovanje 
+        (let [filled (int (* 20 (/ (inc e) epochs)))
+              bar    (str "[" (apply str (repeat filled "="))
+                          (apply str (repeat (- 20 filled) " ")) "]")]
+          (print (format "\r %3d/%d %s Loss: %.4f | Acc: %.2f%%"
+                         (inc e) epochs bar loss acc)))
+        (flush)))
 
+    ;; Metrike samo na kraju
+    (when metrics
+      (println "\n\n________FINAL METRICS_______")
+      (let [matrix (confusion-matrix-fn nn inputs all-class-idx 9)]
+        (print-class-metrics matrix 9 labels)))
+
+    (println "Comleated trainging!")
     nn
     (catch Exception e
       (let [ste (first (.getStackTrace e))]
-
         (println "Exception train-nn" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
+
+
+
+;; ____________METRIKA (FJE)________________
+;; Moralo je da se reorganizuje zbog redosleda pozivanja funkcija
+
+(defn predict [nn input]
+  (try
+     (let [act (nn-forward input nn)
+          output (:y (last (:act act)))
+          prob (softmax! (cor/copy output))]
+      (cor/imax prob))
+    (catch Exception e
+    (let [ste (first (.getStackTrace e))]
+      (println "Exception predict" (.getMessage e) "Line:" (.getLineNumber ste)))
+    (throw e))))
+  
+
+(defn confusion-matrix-fn [nn features labels n-classes]
+  (try
+      (let [n (cor/dim labels)
+           cm (atom (vec (repeat n-classes (vec (repeat n-classes 0)))))]
+       (dotimes [i n]
+         (let [input (cor/row features i)
+               actual (int (cor/entry labels i))
+               pred (predict nn input)]
+           (swap! cm update actual
+                  (fn [row] (update row pred inc)))))
+       @cm)
+    (catch Exception e
+    (let [ste (first (.getStackTrace e))]
+      (println "Exception confusion-matrix-fn" (.getMessage e) "Line:" (.getLineNumber ste)))
+    (throw e))))
+
+
+
+
+(defn class-metrics [matrix n-classes c]
+  (try
+    (let [true-positives  (get-in matrix [c c])
+          false-positives (reduce + (map #(get-in matrix [% c])
+                                         (remove #(= % c) (range n-classes))))
+          false-negatives (reduce + (map #(get-in matrix [c %])
+                                         (remove #(= % c) (range n-classes))))
+          true-negatives  (reduce + (for [i (range n-classes)
+                                          j (range n-classes)
+                                          :when (and (not= i c) (not= j c))]
+                                      (get-in matrix [i j])))
+          precision (if (> (+ true-positives false-positives) 0)
+                      (/ (float true-positives) (+ true-positives false-positives))
+                      0.0)
+          recall    (if (> (+ true-positives false-negatives) 0)
+                      (/ (float true-positives) (+ true-positives false-negatives))
+                      0.0)
+          f1        (if (> (+ precision recall) 0)
+                      (* 2.0 (/ (* precision recall) (+ precision recall)))
+                      0.0)]
+
+      {:true-positives  true-positives
+       :false-positives false-positives
+       :false-negatives false-negatives
+       :true-negatives  true-negatives
+       :precision precision
+       :recall    recall
+       :f1        f1})
+
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception class-metrics" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+
+(defn print-class-metrics [matrix n-classes labels-map]
+  (try
+    (println "___Matrics by class____ \n")
+    (doseq [c (range n-classes)]
+      (let [{:keys [true-positives false-positives
+                    false-negatives true-negatives
+                    precision recall f1]} (class-metrics matrix n-classes c)
+            label (if labels-map
+                    (get labels-map c (str "Class " c))
+                    (str "Klasa " c))]
+        (println (format "%-25s | TP: %4d | FP: %4d | FN: %4d | TN: %4d | Precision: %.3f | Recall: %.3f | F1: %.3f"
+                         label true-positives false-positives
+                         false-negatives true-negatives
+                         precision recall f1))))
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception print-class-metrics" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+(defn evaluate [nn features labels]
+  (try
+    (let [samples (cor/dim labels)]
+
+      (dotimes [i samples]
+        (let [input (cor/row features i)
+              actual (int (cor/entry labels i))
+              pred (predict nn input)]
+
+          ;; Kasnije dodaj confusion matricu i ostlau metriku tancosti modela (precision recall)
+          (println "Sample" i
+                   "| Actual class:" actual
+                   "| Prediction:" pred
+                   "| Boolean:" (= pred actual)))))
+    (catch Exception e
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception evaluate" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
+
+
+;; ___________________TRENIRANJE MREZE___________________________
 
 
 (defn normalize-data [data]
@@ -547,29 +687,6 @@
       (throw e))))
 
 
-(defn predict [nn input]
-  (let [act (nn-forward input nn)
-        output (:y (last (:act act)))
-        prob (softmax! (cor/copy output))]
-    (cor/imax prob)))
-
-
-(defn evaluate [nn features labels]
-  (let [samples (cor/dim labels)]
-
-    (dotimes [i samples]
-      (let [input (cor/row features i)
-            actual (int (cor/entry labels i))
-            pred (predict nn input)]
-
-        ;; Kasnije dodaj confusion matricu i ostlau metriku tancosti modela (precision recall)
-        (println "Sample" i
-                 "| Actual class:" actual
-                 "| Prediction:" pred
-                 "| True:" (= pred actual))))))
-
-
-;; ___________________TRENIRANJE MREZE___________________________
 
 (def features
   ["top-dst-port-share" "src-ip-entropy" "udp-ratio" "dst-ip-entropy"
@@ -636,10 +753,10 @@
 (def train-features (:features dataset))
 (def train-labels (:labels dataset))
 
-(def trained-nn (train-nn nn train-features train-labels 0.01 10))
+(def trained-nn (train-nn nn train-features train-labels 0.01 10 true))
 
-(evaluate trained-nn train-features train-labels)
-;; (let [result1 (prepare-data "new_ddos_dataset.csv" features labels)]
+;; (take 100 (evaluate trained-nn train-features train-labels))
+;; ;; (let [result1 (prepare-data "new_ddos_dataset.csv" features labels)]
 ;;   (evaluate nn (:features result1) (:labels result1)))
 
 
@@ -664,8 +781,8 @@
 ;;                                0.0 1.0 2.0 3.0]))
 
 
-(def classes (ntv/iv 0 1 2 3 4 5 6 7 8))
-
+;; (def classes (ntv/iv 0 1 2 3 4 5 6 7 8))
+;; 
 
 ;; (def classes (ntv/iv 1 2 3 4))
 ;; 
