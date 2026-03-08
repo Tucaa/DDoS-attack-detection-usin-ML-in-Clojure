@@ -101,54 +101,70 @@
 
 
 (defn generate-mixed-dataset
-  [window-ms]
+  [window-ms days]
   (let [start-ts (System/currentTimeMillis)
+        day-ms (* 24 60 60 1000)
+        total-ms (* days day-ms)
+        ;; Kranji timestamp za porveru
+        end-ts (+ start-ts total-ms)] 
 
-        timeline-attacks (w/generate-timeline
-                          window-ms
-                          [:attack {:attack-fn attacks/syn-flood
-                                    :attack-type :syn-flood}]
-                          [:normal {:normal-fn normal/normal-mixed-traffic
-                                    :num-windows 100}]
-                          ;; Ovde se ne gadjaju kako treba parametri proveri gde si pogresio
-                          [:vector {:attack-fn attacks/dns-amplification
-                                    :attack-type :dns-amplification
-                                    :instances 3
-                                    :duration-hours 4}]
-                          [:normal {:normal-fn normal/normal-mixed-traffic
-                                    :num-windows 100}]
-                          [:attack {:attack-fn attacks/subnet-carpet-bombing
-                                    :attack-type :subnet-carpet-bombing}])
+    (loop [curr-ts start-ts
+           all-windows []]
+      (if (>= curr-ts end-ts)
+        all-windows ; Uslov za kraj i vraćanje rezultata
+        (let [timeline-attacks
+              (w/generate-timeline
+               window-ms
+               [:attack {:attack-fn attacks/syn-flood
+                         :attack-type :syn-flood}]
+               [:normal {:normal-fn normal/normal-mixed-traffic
+                         :num-windows 100}]
+               [:attack {:attack-fn attacks/dns-amplification
+                         :attack-type :dns-amplification}]
+               [:normal {:normal-fn normal/normal-mixed-traffic
+                         :num-windows 100}]
+               [:attack {:attack-fn attacks/subnet-carpet-bombing
+                         :attack-type :subnet-carpet-bombing}])
 
-        balanced-samples (mapcat
-                          (fn [attack-type attack-fn]
-                            (map-indexed (fn [idx sample]
-                                           (assoc sample
-                                                  :label attack-type
-                                                  :window-id idx
-                                                  :timestamp start-ts
-                                                  :attack-active (< (rand) 0.15)))
-                                         (repeatedly 100 attack-fn)))
-                          ["udp-flood-large" "icmp-flood" "udp-flood-mixed"
-                           "ntp-amplification" "ack-flood"]
-                          [attacks/udp-large-packets attacks/icmp-flood
-                           attacks/udp-flood-mixed attacks/ntp-amplification
-                           attacks/ack-flood])
+              balanced-samples
+              (mapcat
+               (fn [attack-type attack-fn offset]
+                 (map-indexed
+                  (fn [idx sample]
+                    (assoc sample
+                           :label attack-type
+                           :window-id idx
+                           ;; Svaki uzorak dobija razlicit timestamp
+                           :timestamp (+ curr-ts (* (+ offset idx) window-ms))
+                           :ts_formated (w/format-timestamp (+ curr-ts (* (+ offset idx) window-ms)))
+                           ;; Stavljeno je da su svi napadi aktivni
+                           :attack-active true))
+                  (repeatedly 100 attack-fn)))
+               ["udp-flood-large" "icmp-flood" "udp-flood-mixed" "ntp-amplification" "ack-flood"]
+               [attacks/udp-large-packets attacks/icmp-flood attacks/udp-flood-mixed attacks/ntp-amplification attacks/ack-flood]
+               ;; Offset da se timestamps ne preklapaju izmedju klasa
+               (map #(* % 100) (range 5)))
 
-        extra-normal (w/generate-windows-normal normal/normal-mixed-traffic
-                                                1000
-                                                start-ts
-                                                window-ms)]
+              last-timeline-ts
+              (if (empty? timeline-attacks)
+                curr-ts
+                (:timestamp (last timeline-attacks)))
 
-    (concat timeline-attacks balanced-samples extra-normal)))
+              extra-normal (w/generate-windows-normal normal/normal-mixed-traffic 1000 curr-ts window-ms)
+              last-ts (if (empty? extra-normal) last-timeline-ts (:timestamp (last extra-normal)))]
+
+          (recur (+ last-ts window-ms)
+                 (concat all-windows timeline-attacks balanced-samples extra-normal)))))))
 
 
 (defn -main [& args]
   ;; Ovde mozes da dodas da se dinamicki uzima argument kada se pokrene lein run pa da na osnovu pozivas jednu od funkcija i pises podatke
   (let [window-ms 5000
+        ;; Uslov za definisanje prilikom poziva fje 
+        days (if (empty? args) 1 (Integer/parseInt (first args)))
         data (do
                (println "Generating dataset")
-               (generate-mixed-dataset window-ms))]
+               (generate-mixed-dataset window-ms days))]
     ;;  (generate-complete-dataset window-ms))]
     ;;  (generate-complete-dataset window-ms))]
     (println data)

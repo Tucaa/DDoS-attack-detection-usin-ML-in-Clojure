@@ -696,7 +696,8 @@
    "byte-rate" "avg-packet-size" "tcp-ack-ratio" "dns-response-ratio"
    "top-src-ip-byte-share" "dst-port-entropy" "attack-active"])
 
-(def labels
+
+(def labels-idx
   {"ack-flood" 0
    "icmp-flood" 1
    "ntp-amplification" 2
@@ -706,6 +707,18 @@
    "normal" 6
    "subnet-carpet-bombing" 7
    "syn-flood" 8})
+
+
+(def labels
+  {0 "ack-flood"
+   1 "icmp-flood"
+   2 "ntp-amplification"
+   3 "udp-flood-large"
+   4 "udp-flood-mixed"
+   5 "dns-amplification"
+   6 "normal"
+   7 "subnet-carpet-bombing"
+   8 "syn-flood"})
 
 
 
@@ -749,7 +762,7 @@
 ;; (println "Work dir" (System/getProperty "user.dir"))
 ;; 
 
-(def dataset (prepare-data "new_ddos_dataset.csv" features labels))
+(def dataset (prepare-data "new_ddos_dataset.csv" features labels-idx))
 (def train-features (:features dataset))
 (def train-labels (:labels dataset))
 
