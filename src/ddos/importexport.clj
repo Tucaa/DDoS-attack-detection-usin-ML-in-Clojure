@@ -9,13 +9,13 @@
                      (cons (map name headers)
                            (map #(map % headers) rows))))))
 
-(defn parse-value [s]
-  (cond
-    (nil? s) nil
-    (= s "true") true
-    (= s "false") false
-    :else (try (Double/parseDouble s)
-               (catch Exception _ s))))
+;; (defn parse-value [s]
+;;   (cond
+;;     (nil? s) nil
+;;     (= s "true") true
+;;     (= s "false") false
+;;     :else (try (Double/parseDouble s)
+;;                (catch Exception _ s))))
 
 (defn load-csv [file-path]
   (try

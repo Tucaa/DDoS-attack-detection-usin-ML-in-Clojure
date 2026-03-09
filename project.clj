@@ -5,13 +5,22 @@
   :dependencies [[org.clojure/clojure "1.12.1"]
                  [org.clojure/data.csv "1.1.0"]
                  [org.clojure/tools.logging "1.2.4"]
-                 [uncomplicate/deep-diamond "0.42.0"
-                  ;; Za sada je excludovana cuda radi se samo na cpu
-                  :exclusions [org.bytedeco/cuda-platform
-                               org.bytedeco/dnnl-platform]]
-                 [uncomplicate/neanderthal "0.60.0"]
+
+                 [org.uncomplicate/neanderthal-mkl "0.61.0"]
+                 [org.bytedeco/mkl "2025.3-1.5.13" :classifier "windows-x86_64-redist"]
+                 ;; optional, if you want GPU computing with CUDA. Beware: the cuda redist jars are very large!
+                 [org.bytedeco/cuda-redist "13.1-9.19-1.5.13" :classifier "windows-x86_64"]
+                 [org.bytedeco/cuda-redist-cublas "13.1-9.19-1.5.13" :classifier "windows-x86_64"]
+                 [org.bytedeco/cuda-redist-cudnn "13.1-9.19-1.5.13" :classifier "windows-x86_64"]
+
+
+                 ;; [uncomplicate/deep-diamond "0.43.0"
+                 ;;  ;; Za sada je excludovana cuda radi se samo na cpu
+                 ;;  :exclusions [org.bytedeco/cuda-platform
+                 ;;               org.bytedeco/dnnl-platform]]
+                 ;[uncomplicate/neanderthal "0.60.0"]
                  ;;  [org.bytedeco/mkl "2025.2-1.5.12" :classifier "windows-x86_64"]
-                 [org.bytedeco/mkl "2025.2-1.5.12" :classifier "windows-x86_64-redist"]
+                 ;;[org.bytedeco/mkl "2025.2-1.5.12" :classifier "windows-x86_64-redist"]
                  [incanter "1.9.3"]
                  [midje "1.10.10"]]
 

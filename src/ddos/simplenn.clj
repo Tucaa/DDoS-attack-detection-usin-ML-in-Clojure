@@ -420,7 +420,6 @@
 
 
 ;; Treniranje vise parametara 
-;; Treniranje vise parametara 
 (defn train-batch [nn inputs all-class-idx learning-rate]
   (try
     ;;(println "Parameters train-batch" nn inputs all-class-idx learning-rate)
@@ -474,7 +473,7 @@
       (let [matrix (confusion-matrix-fn nn inputs all-class-idx 9)]
         (print-class-metrics matrix 9 labels)))
 
-    (println "Comleated trainging!")
+    (println "Finished training!")
     nn
     (catch Exception e
       (let [ste (first (.getStackTrace e))]
