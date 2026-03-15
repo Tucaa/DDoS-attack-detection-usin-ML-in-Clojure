@@ -31,6 +31,10 @@
       (let [ste (first (.getStackTrace e))]
         (println "Exception load-csv" (.getMessage e) "Line:" (.getLineNumber ste))
         (throw e)))))
+
+
+
+
 ;; (defn load-csv [filepath]
 ;;   (with-open [reader (io/reader filepath)]
 ;;     ;; Loaduje se celokupni csv u memoriju

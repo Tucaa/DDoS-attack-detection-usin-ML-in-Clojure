@@ -5,8 +5,13 @@
   :dependencies [[org.clojure/clojure "1.12.1"]
                  [org.clojure/data.csv "1.1.0"]
                  [org.clojure/tools.logging "1.2.4"]
-
+                 [uncomplicate/neanderthal "0.61.0"]
+                 [uncomplicate/deep-diamond "0.43.0"]
+                 [org.uncomplicate/deep-diamond-cuda "0.43.0"]
                  [org.uncomplicate/neanderthal-mkl "0.61.0"]
+                 [org.uncomplicate/neanderthal-cuda  "0.61.0"]
+                 [org.uncomplicate/deep-diamond-base "0.43.0"]
+                 [org.uncomplicate/deep-diamond-dnnl "0.43.0"]
                  [org.bytedeco/mkl "2025.3-1.5.13" :classifier "windows-x86_64-redist"]
                  ;; optional, if you want GPU computing with CUDA. Beware: the cuda redist jars are very large!
                  [org.bytedeco/cuda-redist "13.1-9.19-1.5.13" :classifier "windows-x86_64"]
