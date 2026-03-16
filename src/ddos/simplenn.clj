@@ -16,7 +16,7 @@
 (declare features)
 
 ;; ____________________AKTIVACIONE I OSTALE MATEMATICKE FJE_____________________
-;; Kasnije optimizovati
+;; Kasnije optimizovati 
 (defn sigmoid! [n]
   (try
     (let [vec-size (cor/dim n)]
@@ -485,33 +485,34 @@
 ;; ____________METRIKA (FJE)________________
 ;; Moralo je da se reorganizuje zbog redosleda pozivanja funkcija
 
+
 (defn predict [nn input]
   (try
-     (let [act (nn-forward input nn)
+    (let [act (nn-forward input nn)
           output (:y (last (:act act)))
           prob (softmax! (cor/copy output))]
       (cor/imax prob))
     (catch Exception e
-    (let [ste (first (.getStackTrace e))]
-      (println "Exception predict" (.getMessage e) "Line:" (.getLineNumber ste)))
-    (throw e))))
-  
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception predict" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
+
 
 (defn confusion-matrix-fn [nn features labels n-classes]
   (try
-      (let [n (cor/dim labels)
-           cm (atom (vec (repeat n-classes (vec (repeat n-classes 0)))))]
-       (dotimes [i n]
-         (let [input (cor/row features i)
-               actual (int (cor/entry labels i))
-               pred (predict nn input)]
-           (swap! cm update actual
-                  (fn [row] (update row pred inc)))))
-       @cm)
+    (let [n (cor/dim labels)
+          cm (atom (vec (repeat n-classes (vec (repeat n-classes 0)))))]
+      (dotimes [i n]
+        (let [input (cor/row features i)
+              actual (int (cor/entry labels i))
+              pred (predict nn input)]
+          (swap! cm update actual
+                 (fn [row] (update row pred inc)))))
+      @cm)
     (catch Exception e
-    (let [ste (first (.getStackTrace e))]
-      (println "Exception confusion-matrix-fn" (.getMessage e) "Line:" (.getLineNumber ste)))
-    (throw e))))
+      (let [ste (first (.getStackTrace e))]
+        (println "Exception confusion-matrix-fn" (.getMessage e) "Line:" (.getLineNumber ste)))
+      (throw e))))
 
 
 
@@ -570,24 +571,28 @@
         (println "Exception print-class-metrics" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
-(defn evaluate [nn features labels]
-  (try
-    (let [samples (cor/dim labels)]
 
-      (dotimes [i samples]
-        (let [input (cor/row features i)
-              actual (int (cor/entry labels i))
-              pred (predict nn input)]
 
-          ;; Kasnije dodaj confusion matricu i ostlau metriku tancosti modela (precision recall)
-          (println "Sample" i
-                   "| Actual class:" actual
-                   "| Prediction:" pred
-                   "| Boolean:" (= pred actual)))))
-    (catch Exception e
-      (let [ste (first (.getStackTrace e))]
-        (println "Exception evaluate" (.getMessage e) "Line:" (.getLineNumber ste)))
-      (throw e))))
+
+
+;; (defn evaluate [nn features labels]
+;;   (try
+;;     (let [samples (cor/dim labels)]
+;; 
+;;       (dotimes [i samples]
+;;         (let [input (cor/row features i)
+;;               actual (int (cor/entry labels i))
+;;               pred (predict nn input)]
+;; 
+;;           ;; Kasnije dodaj confusion matricu i ostlau metriku tancosti modela (precision recall)
+;;           (println "Sample" i
+;;                    "| Actual class:" actual
+;;                    "| Prediction:" pred
+;;                    "| Boolean:" (= pred actual)))))
+;;     (catch Exception e
+;;       (let [ste (first (.getStackTrace e))]
+;;         (println "Exception evaluate" (.getMessage e) "Line:" (.getLineNumber ste)))
+;;       (throw e))))
 
 
 

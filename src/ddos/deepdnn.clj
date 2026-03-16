@@ -3,7 +3,7 @@
    [uncomplicate.diamond.dnn :as dnn]
    ;; cudnn runuje na gpu
    [uncomplicate.diamond.internal.cudnn.factory :refer [cudnn-factory]]
-   ;;dnnl factory je za dense runuje na cpu
+   ;;dnnl factory  runuje na cpu
    [uncomplicate.diamond.internal.dnnl.factory :refer [dnnl-factory]]
    [uncomplicate.diamond.tensor :as tensor]
    [uncomplicate.neanderthal.core :as cor]
@@ -11,6 +11,7 @@
 
    [ddos.dataprep :as dp]))
 
+;; Ovo je feed-forward arhitektura
 (def nn-architecture [(dnn/dense [128] :relu)
                       (dnn/dropout 0.3)
                       (dnn/dense [64] :relu)
@@ -19,40 +20,37 @@
                       (dnn/dropout 0.2)
                       (dnn/dense [9] :softmax)])
 
+(def rnn-architecture [(dnn/rnn 64 :gru)
+                       (dnn/dense [32] :relu)
+                       (dnn/dropout 0.2)
+                       (dnn/dense [9] :softmax)])
+
 ;; Nvidia cuda
 (defonce gpu (cudnn-factory))
+(println "GPU information: " gpu)
 ;; Na cpu
-(defonce cpu (dnnl-factory))
+;;(defonce cpu (dnnl-factory))
 
 ;; Inicijalno stavljeno 128 batchova sa po 25 uzoraka
-(def feedforward-nn (dnn/network cpu (tensor/desc [128 25] :float :nc) nn-architecture))
+(def feedforward-nn (dnn/network gpu (tensor/desc [128 25] :float :nc) nn-architecture))
+(def recurent-nn (dnn/network gpu (tensor/desc [dp/len-sequence 128 23] :float :tnc) rnn-architecture))
 
 ;Iniciajlizacija tezina i definisanje optimizacije
 (defonce nn (dnn/init! (feedforward-nn :adam)))
+(defonce nn-rec (dnn/init! (recurent-nn :adam)))
 
 
-;; Morao je tenzor y da se knovertuje u matricu u [n 9]
-(defn output-matrix [labels classes]
-  (let [n (cor/dim labels)
-        matrix (ntv/fge n classes)]
-    (dotimes [i n]
-      (let [class-idx (int (cor/entry labels i))]
-        (cor/entry! matrix i class-idx 1.0)))
-    matrix))
-
-(defn train-nn []
+(defn train-dnn []
   (try
     ;; 
     (let [data (dp/prepare-data-dnn "new_ddos_dataset.csv")
           n (* (quot (:n data) 128) 128)
 
-
           x-sub (cor/submatrix (:x data) 0 0 n 25)
           y-sub (cor/submatrix (:y data) 0 0 n 9)
-
           ;; Kreiraj prazne tenzore pa prebaci podatke
-          x     (tensor/tensor cpu [n 25] :float :nc)
-          y     (tensor/tensor cpu [n 9]  :float :nc)
+          x     (tensor/tensor gpu [n 25] :float :nc)
+          y     (tensor/tensor gpu [n 9]  :float :nc)
           _     (cor/transfer! x-sub x)
           _     (cor/transfer! y-sub y)]
 
@@ -84,18 +82,50 @@
 
 
       (time (dnn/train! nn x y :crossentropy 12 []))
-
-
-      ;; (time
-      ;;  (dnn/train! nn x y :crossentropy 10
-      ;;              (fn [epoch loss]
-      ;;                (println
-      ;;                 (format "Epoch %d | Loss: %.6f" epoch (float loss))))))
-                      )
-;; 
+      (time
+       (dotimes [epoch 12]
+         (let [loss (dnn/train! nn x y :crossentropy 1 [])]
+           (println "Epoch" (inc epoch) "/ 12 | Loss:" (float loss)))))
+      
+      )
+    ;; 
     (catch Exception e
       (let [ste (first (.getStackTrace e))]
         (println "Exception deepdnn | train-nn" (.getMessage e) "Line:" (.getLineNumber ste)))
       (throw e))))
 
-(train-nn)
+
+
+
+(defn train-rnn []
+  (let [data (dp/prepare-data-rnn "new_ddos_dataset.csv")
+        ;; Stavljeno inicijalno da je batch size 128 po potrebi promentiti
+        n    (* (quot (:n data) 128) 128)
+
+        ;; Ovde je 23 posto se preksacu neki parametri u dataprepu (uraditi dinamicki kasnije)
+        x-sub (cor/submatrix (:x data) 0 0 (* dp/len-sequence 23) n)
+        y-sub (cor/submatrix (:y data) 0 0 n 9)
+        ;;Isto vazi i za ovo
+        x (tensor/tensor gpu [dp/len-sequence n 23] :float :tnc)
+        y (tensor/tensor gpu [n 9]             :float :nc)
+        _ (cor/transfer! x-sub x)
+        _ (cor/transfer! y-sub y)]
+
+
+    (println "Total samples:" (:n data))
+    (println "Training samples:" n)
+    (println "x tensor:" (tensor/desc x))
+    (println "y tensor:" (tensor/desc y))
+    (println "_________Starting training_______")
+
+
+    (time
+     (dotimes [epoch 12]
+       (let [loss (dnn/train! nn-rec x y :crossentropy 1 [])]
+         (println "Epoch" (inc epoch) "/ 12 | Loss:" (float loss)))))))
+
+
+(println "______FeedForward_____")
+(train-dnn)
+(println "______ReccurentNN_____")
+(train-rnn)
