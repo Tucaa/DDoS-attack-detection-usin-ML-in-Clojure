@@ -125,7 +125,8 @@
          (println "Epoch" (inc epoch) "/ 12 | Loss:" (float loss)))))))
 
 
-(println "______FeedForward_____")
-(train-dnn)
-(println "______ReccurentNN_____")
-(train-rnn)
+;; (println "______FeedForward_____")
+;; (train-dnn)
+;; (println "______ReccurentNN_____")
+;; (train-rnn)
+;; 

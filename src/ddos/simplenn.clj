@@ -737,9 +737,9 @@
 ;;     (cor/mv! w input output)))
 
 
-(def nn [(create-layer-he 25 64 relu!)
-         (create-layer-he 64 32 relu!)
-         (assoc (create-layer-he 32 9 nil) :linear? true)])
+;; (def nn [(create-layer-he 25 64 relu!)
+;;          (create-layer-he 64 32 relu!)
+;;          (assoc (create-layer-he 32 9 nil) :linear? true)])
 
 ;; (def nn [(create-layer 4 8 relu!)
 ;;          (create-layer 8 6 relu!)
@@ -749,30 +749,30 @@
 ;;          (create-layer 8 6 sigmoid!)
 ;;          (create-layer 6 2 sigmoid!)])
 
-(def input (ntv/fv [1.1 2.2 3.3 4.4]))
-
+;; (def input (ntv/fv [1.1 2.2 3.3 4.4]))
+;; 
 ;; (println "Testing single layer fn" (single-step nn input 1 0.1))
 
-(def train-data (ntv/fge 9 4 [1.0 0.0 1.0 0.0
-                              2.0 1.0 2.0 1.0
-                              3.0 2.0 1.0 0.0
-                              0.0 1.0 2.0 3.0
-                              1.5 0.5 1.5 0.5
-                              2.5 1.5 0.5 1.0
-                              0.5 2.0 3.0 1.0
-                              3.0 3.0 0.0 1.0
-                              1.0 2.0 0.0 3.0]))
-
-
-(println "Test normalize data" normalize-data train-data)
-;; (println "Work dir" (System/getProperty "user.dir"))
+;; (def train-data (ntv/fge 9 4 [1.0 0.0 1.0 0.0
+;;                               2.0 1.0 2.0 1.0
+;;                               3.0 2.0 1.0 0.0
+;;                               0.0 1.0 2.0 3.0
+;;                               1.5 0.5 1.5 0.5
+;;                               2.5 1.5 0.5 1.0
+;;                               0.5 2.0 3.0 1.0
+;;                               3.0 3.0 0.0 1.0
+;;                               1.0 2.0 0.0 3.0]))
 ;; 
-
-(def dataset (prepare-data "new_ddos_dataset.csv" features labels-idx))
-(def train-features (:features dataset))
-(def train-labels (:labels dataset))
-
-(def trained-nn (train-nn nn train-features train-labels 0.01 10 true))
+;; 
+;; (println "Test normalize data" normalize-data train-data)
+;; ;; (println "Work dir" (System/getProperty "user.dir"))
+;; ;; 
+;; 
+;; (def dataset (prepare-data "new_ddos_dataset.csv" features labels-idx))
+;; (def train-features (:features dataset))
+;; (def train-labels (:labels dataset))
+;; 
+;; (def trained-nn (train-nn nn train-features train-labels 0.01 10 true))
 
 ;; (take 100 (evaluate trained-nn train-features train-labels))
 ;; ;; (let [result1 (prepare-data "new_ddos_dataset.csv" features labels)]
