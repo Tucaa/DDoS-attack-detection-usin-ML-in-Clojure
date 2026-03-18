@@ -93,11 +93,19 @@ This namespace consists of the neural network architectures nn-architecture and 
 
 ### Literature:
 https://dragan.rocks/
+
 https://aiprobook.com/deep-learning-for-programmers/
+
 https://aiprobook.com/numerical-linear-algebra-for-programmers/
+
 https://github.com/uncomplicate
+
 https://inmon.com/technology/index.php
+
 https://www.cisco.com/c/en/us/td/docs/iosxr/cisco8000/netflow/configuration/b-netflow-configuration-ios-xr-8000.html
+
 https://www.geeksforgeeks.org/machine-learning/introduction-to-recurrent-neural-network/
+
 https://www.cloudflare.com/learning/ddos/what-is-a-ddos-attack/
-Internal documentation
+
+Internal documentation (from company)
