@@ -95,18 +95,18 @@
 
 
 ;;  Kros entropija za ceo batch
-(defn cross-entropy-batch [vec all-class-idx]
-  (try
-    (let [batch-size (cor/mrows vec)
-          losses (for [i (range batch-size)]
-                   (cross-entropy (cor/row vec i)
-                                  (cor/entry all-class-idx i)))]
-      (/ (reduce + 0.0 losses) batch-size))
-    (catch Exception e
-      (let [ste (first (.getStackTrace e))]
-
-        (println "Exception cross-entropy-batch" (.getMessage e) "Line:" (.getLineNumber ste)))
-      (throw e))))
+;; (defn cross-entropy-batch [vec all-class-idx]
+;;   (try
+;;     (let [batch-size (cor/mrows vec)
+;;           losses (for [i (range batch-size)]
+;;                    (cross-entropy (cor/row vec i)
+;;                                   (cor/entry all-class-idx i)))]
+;;       (/ (reduce + 0.0 losses) batch-size))
+;;     (catch Exception e
+;;       (let [ste (first (.getStackTrace e))]
+;; 
+;;         (println "Exception cross-entropy-batch" (.getMessage e) "Line:" (.getLineNumber ste)))
+;;       (throw e))))
 
 
 
